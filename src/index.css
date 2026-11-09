@@ -1,0 +1,58 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
+  background: #030712;
+  color: #e8f1ff;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+/* ───────── Scrollbars: a thin glowing rail, not the grey system bar ───────── */
+/* Chromium / Safari (note: setting scrollbar-color here would disable these in Chrome 121+). */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+  /* Keep the rail clear of rounded panel corners. */
+  margin-block: 14px;
+}
+::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(94, 234, 212, 0.45), rgba(61, 139, 253, 0.45));
+  box-shadow: 0 0 6px rgba(61, 139, 253, 0.35);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(94, 234, 212, 0.75), rgba(61, 139, 253, 0.75));
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox */
+@supports (-moz-appearance: none) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(94, 180, 240, 0.5) transparent;
+  }
+}

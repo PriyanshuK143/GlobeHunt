@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#030712" />
+    <title>GLOBEHUNT</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700&family=Patrick+Hand&family=Source+Sans+3:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      html, body { background: #030712; }
+      #launch-veil {
+        position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center;
+        background: radial-gradient(ellipse 70% 50% at 50% 45%, #0a1830 0%, #030712 70%);
+        transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0s;
+      }
+      #launch-veil.is-gone { opacity: 0; visibility: hidden; pointer-events: none;
+        transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0.9s; }
+      /* CSS-only safety net: the veil lifts by itself even if the app script never runs. */
+      #launch-veil { animation: veil-auto 0.7s ease 2.2s forwards; }
+      #launch-veil.is-gone { animation: none; }
+      #launch-veil.is-leaving { animation: none; opacity: 1; visibility: visible; transition-duration: 0.22s; transition-timing-function: ease-in; }
+      @keyframes veil-auto { to { opacity: 0; visibility: hidden; pointer-events: none; } }
+      #launch-veil span {
+        width: 10px; height: 10px; border-radius: 50%; background: #5eead4;
+        box-shadow: 0 0 18px rgba(94, 234, 212, 0.8);
+        animation: veil-breathe 1.6s ease-in-out infinite;
+      }
+      #launch-veil.is-leaving span { display: none; }
+      @keyframes veil-breathe { 0%, 100% { opacity: 0.25; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1); } }
+      @media (prefers-reduced-motion: reduce) { #launch-veil, #launch-veil.is-gone { transition-duration: 0.01ms; } #launch-veil span { animation: none; } }
+    </style>
+  </head>
+  <body>
+    <div id="launch-veil" role="status" aria-label="Loading GLOBEHUNT"><span></span></div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
