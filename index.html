@@ -12,6 +12,17 @@
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#030712" />
     <meta name="color-scheme" content="dark" />
     <title>GLOBEHUNT</title>
+    <script>
+      // Studio intro: first page load of a browser session only (sessionStorage, so
+      // reloads skip it and a new session replays it). Decided before first paint so
+      // the loading screen already matches the intro's background: no flash.
+      try {
+        if (!sessionStorage.getItem('ems.intro')) {
+          sessionStorage.setItem('ems.intro', '1')
+          document.documentElement.dataset.intro = 'play'
+        }
+      } catch (e) {}
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -36,6 +47,8 @@
         width: 10px; height: 10px; border-radius: 50%; background: #5eead4;
       }
       #launch-veil.is-leaving span { display: none; }
+      html[data-intro='play'], html[data-intro='play'] #launch-veil { background: #0e0e0f; }
+      html[data-intro='play'] #launch-veil span { display: none; }
       @media (prefers-reduced-motion: reduce) { #launch-veil, #launch-veil.is-gone { transition-duration: 0.01ms; } }
     </style>
   </head>

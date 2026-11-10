@@ -1,0 +1,272 @@
+/*
+ * Escape Matrix Studio intro. Every step is a one-shot CSS animation on
+ * transform, opacity or stroke-dashoffset; nothing loops, so all
+ * animation work stops when the overlay has faded out at exactly 5 s.
+ *
+ * Timeline: 0–0.7 cursor · 0.7–1.8 tagline + progress · 1.8–2.8 controller ·
+ * 2.8–3.7 controller → EM symbol · 3.7–4.5 wordmark · 4.5–5.0 hold + fade.
+ * Full spec: ESCAPE_MATRIX_INTRO_STANDARD.md
+ */
+.em-intro {
+  --em-bg: #0e0e0f;
+  --em-fg: #ece8e1;
+  --em-dim: #8c8984;
+  --em-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --em-ease-io: cubic-bezier(0.65, 0, 0.35, 1);
+
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  background: var(--em-bg);
+  color: var(--em-fg);
+  contain: strict;
+  overflow: hidden;
+  cursor: default;
+  user-select: none;
+  -webkit-user-select: none;
+  animation: em-out 0.5s cubic-bezier(0.4, 0, 0.2, 1) 4.5s forwards;
+}
+
+.em-intro__stage {
+  display: grid;
+  place-items: center;
+}
+.em-intro__stage > * {
+  grid-area: 1 / 1;
+}
+
+/* ── 0.0–0.9 s: terminal ─────────────────────────────────────────── */
+.em-term {
+  margin: 0;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
+  font-size: clamp(17px, 4.4vw, 26px);
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0.04em;
+}
+.em-term--cursor {
+  font-size: clamp(26px, 6vw, 38px);
+  animation:
+    em-in 0.25s ease-out both,
+    em-gone 0.12s linear 0.58s forwards;
+}
+.em-caret {
+  display: inline-block;
+  animation: em-blink 0.22s steps(1) 0.14s 2;
+}
+
+.em-term--tag {
+  width: max-content;
+  animation:
+    em-in 0.15s ease-out 0.7s both,
+    em-up-out 0.16s ease-in 1.64s forwards;
+}
+/* Typewriter: a background-coloured cover slides off in character steps. A transform
+   animation runs on the compositor, so app start-up work cannot stall the typing. */
+.em-line {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+  white-space: pre;
+}
+.em-line::after {
+  content: '';
+  position: absolute;
+  inset: 0 -1px;
+  background: var(--em-bg);
+  animation: em-type 0.3s steps(8, end) 0.75s both;
+}
+.em-line--2 {
+  padding-left: 2ch;
+}
+.em-line--2::after {
+  left: 2ch;
+  animation: em-type 0.45s steps(15, end) 1s both;
+}
+.em-bar {
+  height: 0.62em;
+  margin-top: 0.7em;
+  padding: 2px;
+  border: 1.5px solid var(--em-fg);
+  border-radius: 2px;
+  animation: em-in 0.15s ease-out 0.75s both;
+}
+.em-bar__fill {
+  height: 100%;
+  background: repeating-linear-gradient(-55deg, var(--em-fg) 0 5px, transparent 5px 9px);
+  transform-origin: left center;
+  animation: em-fill 0.85s cubic-bezier(0.4, 0, 0.2, 1) 0.8s both;
+}
+
+/* ── 0.9–1.9 s: controller → mark ────────────────────────────────── */
+.em-art {
+  width: min(220px, 56vw);
+  animation: em-lift 0.45s var(--em-ease-io) 3.7s forwards;
+}
+.em-art svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.em-pad,
+.em-mark {
+  stroke: var(--em-fg);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.em-pad path,
+.em-mark path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.em-pad {
+  animation: em-pad-out 0.36s ease-in 2.8s forwards;
+}
+.em-pad path {
+  animation: em-draw 0.66s var(--em-ease-io) 1.82s both;
+}
+.em-pad path:nth-child(2) {
+  animation-delay: 1.94s;
+}
+.em-pad path:nth-child(n + 3) {
+  animation-delay: 2.04s;
+}
+
+.em-frag {
+  fill: var(--em-dim);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation:
+    em-frag-in 0.4s var(--em-ease-out) both,
+    em-frag-converge 0.45s cubic-bezier(0.5, 0, 0.75, 0) forwards;
+}
+
+.em-mark {
+  animation: em-mark-in 0.7s var(--em-ease-out) 2.85s both;
+}
+.em-mark path {
+  animation: em-draw 0.62s var(--em-ease-io) 2.88s both;
+}
+.em-mark path:nth-child(2) {
+  animation-delay: 3.04s;
+}
+
+/* ── 1.9–2.5 s: wordmark ─────────────────────────────────────────── */
+.em-word {
+  display: grid;
+  justify-items: center;
+  gap: 0.55em;
+  font-family: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+  transform: translateY(var(--em-word-y));
+  --em-word-y: calc(min(220px, 56vw) * 0.36);
+  animation: em-rise 0.5s var(--em-ease-out) 3.8s both;
+}
+.em-word__name {
+  font-size: clamp(22px, 6vw, 34px);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  line-height: 1;
+}
+.em-word__sub {
+  display: flex;
+  align-items: center;
+  gap: 0.9em;
+  font-size: clamp(11px, 2.6vw, 14px);
+  font-weight: 400;
+  letter-spacing: 0.42em;
+  color: var(--em-fg);
+  animation: em-in 0.4s ease-out 4s both;
+}
+.em-word__sub::before,
+.em-word__sub::after {
+  content: '';
+  width: 3.4em;
+  height: 1px;
+  background: var(--em-dim);
+  transform-origin: center;
+  animation: em-line 0.42s var(--em-ease-out) 4.02s both;
+}
+.em-word__sub::after {
+  /* Cancel the trailing letter-spacing after the last letter so both rules sit equally close. */
+  margin-left: -0.42em;
+}
+
+/* ── keyframes ───────────────────────────────────────────────────── */
+@keyframes em-in {
+  from { opacity: 0; }
+}
+@keyframes em-gone {
+  to { opacity: 0; }
+}
+@keyframes em-out {
+  to { opacity: 0; visibility: hidden; }
+}
+@keyframes em-blink {
+  50% { opacity: 0; }
+}
+@keyframes em-up-out {
+  to { opacity: 0; transform: translateY(-6px); }
+}
+@keyframes em-type {
+  from { transform: translateX(0); }
+  to { transform: translateX(101%); }
+}
+@keyframes em-fill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes em-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes em-pad-out {
+  to { opacity: 0; transform: scale(0.9); }
+}
+@keyframes em-frag-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 0.8; transform: translateY(0); }
+}
+@keyframes em-frag-converge {
+  from { opacity: 0.8; transform: translate(0, 0) scale(1); }
+  to { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.4); }
+}
+@keyframes em-mark-in {
+  from { opacity: 0; transform: scale(1.1); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes em-lift {
+  to { transform: translateY(calc(min(220px, 56vw) * -0.2)); }
+}
+@keyframes em-rise {
+  from { opacity: 0; transform: translateY(calc(var(--em-word-y) + 10px)); }
+  to { opacity: 1; transform: translateY(var(--em-word-y)); }
+}
+@keyframes em-line {
+  from { transform: scaleX(0); }
+}
+
+/* Reduced motion: no drawing or movement, just the finished logo, briefly. */
+@media (prefers-reduced-motion: reduce) {
+  .em-intro {
+    animation: em-out 0.4s ease 1.2s forwards;
+  }
+  .em-term,
+  .em-pad,
+  .em-frags {
+    display: none;
+  }
+  .em-intro *,
+  .em-intro *::before,
+  .em-intro *::after {
+    animation: none !important;
+  }
+  .em-mark path {
+    stroke-dashoffset: 0;
+  }
+  .em-art {
+    transform: translateY(calc(min(220px, 56vw) * -0.2));
+  }
+}
