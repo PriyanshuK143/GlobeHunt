@@ -23,3 +23,27 @@ dist-ssr
 *.sln
 *.sw?
 .atlas-cache/
+
+# Build output and caches
+*.tsbuildinfo
+coverage
+.vite
+.cache
+
+# Environment and secrets (keep the committed *.env.example templates)
+.env
+.env.*
+!.env.example
+.aws/
+
+# Local AI / editor tooling
+.agents/
+.codex/
+.impeccable/
+.claude/settings.local.json
+
+# Assets kept locally but never published (unknown licence / starter files)
+unused-assets/
+
+# OS files
+Thumbs.db
