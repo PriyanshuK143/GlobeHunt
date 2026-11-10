@@ -4,6 +4,7 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { Earth } from './Earth'
 import { Atmosphere } from './Atmosphere'
 import { Starfield } from './Starfield'
+import { Constellations } from './Constellations'
 import { GlobeLights } from './GlobeLights'
 import { GlobePickLayer } from './picking/GlobePickLayer'
 import { useGlobeNavigation } from './navigation/useGlobeNavigation'
@@ -11,6 +12,7 @@ import { MAX_CAMERA_DISTANCE, MIN_CAMERA_DISTANCE, type LatLng } from './navigat
 import type { GlobeNavigationApi } from './navigation/types'
 import { LocationMarker, type MarkerStore } from './marker'
 import type { SatelliteSpec } from './ambient/orbits'
+import type { CelestialSpec } from './ambient/planets'
 import { AtlasLabels, type AtlasLabel, type LabelFilterFactory } from './labels'
 import { LineLayers, DEFAULT_LAYERS, type GlobeLayers } from './atlas/LineLayers'
 import { ZoomAwareControls } from './atlas/ZoomAwareControls'
@@ -39,6 +41,7 @@ interface GlobeSceneProps {
   labelCanvasRef?: RefObject<HTMLCanvasElement | null>
   layers?: GlobeLayers
   onSatelliteSelect?: (spec: SatelliteSpec) => void
+  onPlanetSelect?: (spec: CelestialSpec) => void
 }
 
 export interface GlobeLabelsConfig {
@@ -67,6 +70,7 @@ export function GlobeScene({
   labelCanvasRef,
   layers = DEFAULT_LAYERS,
   onSatelliteSelect,
+  onPlanetSelect,
 }: GlobeSceneProps) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null)
   useGlobeNavigation(apiRef, controlsRef)
@@ -85,6 +89,7 @@ export function GlobeScene({
       <GlobeLights mode={mode} />
       {effectsOn && quality !== 'low' ? <Nebula strength={showcase ? 1 : 0.7} /> : null}
       <Starfield count={STAR_COUNT[quality]} twinkle={reducedMotion ? 0 : 1} />
+      {effectsOn ? <Constellations visible={showcase} /> : null}
 
       <Earth quality={quality} />
       <LineLayers layers={layers} />
@@ -95,10 +100,10 @@ export function GlobeScene({
       <Atmosphere />
 
       {effectsOn ? (
-        <OrbitalSystem mode={mode} reduced={effects === 'reduced' || quality === 'low'} frozen={reducedMotion} onSelect={onSatelliteSelect} />
+        <OrbitalSystem mode={mode} reduced={effects === 'reduced'} frozen={reducedMotion} onSelect={onSatelliteSelect} />
       ) : null}
       <Meteors interval={meteorInterval(ambient)} />
-      {effectsOn ? <SolarBackdrop visible={showcase} frozen={reducedMotion} /> : null}
+      {effectsOn ? <SolarBackdrop visible={showcase} frozen={reducedMotion} onSelect={showcase ? onPlanetSelect : undefined} /> : null}
 
       {onGlobePick || marker ? (
         <GlobePickLayer

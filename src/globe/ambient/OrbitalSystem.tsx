@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { ORBITS, SATELLITES, orbitPosition, orbitQuaternion, type OrbitSpec, type SatelliteSpec } from './orbits'
 import { SatelliteKit } from './satelliteModels'
 import { approach } from './motion'
+import { getSunDirection } from './useSunDirection'
 import type { AmbientMode } from './types'
 
 const RING_SEGMENTS = 256
@@ -52,7 +53,7 @@ interface OrbitalSystemProps {
   mode: AmbientMode
   /** Showcase only: a satellite was clicked. */
   onSelect?: (spec: SatelliteSpec) => void
-  /** Show only the essential subset of orbits and satellites. */
+  /** Calmer scene: only the essential orbit lines are drawn (every satellite still flies). */
   reduced: boolean
   /** Freeze orbital motion and beacon blinking. */
   frozen: boolean
@@ -60,17 +61,21 @@ interface OrbitalSystemProps {
 
 const _camDir = new THREE.Vector3()
 const _satDir = new THREE.Vector3()
+const _sunLocal = new THREE.Vector3()
+const _inv = new THREE.Quaternion()
 
 /**
- * Orbit rings + low-poly satellites and a space station travelling along them.
+ * Orbit rings + detailed satellites and the ISS travelling along them; their solar
+ * arrays turn to face the Sun.
  * All motion runs in one useFrame — no React state per frame.
  */
 export function OrbitalSystem({ mode, reduced, frozen, onSelect }: OrbitalSystemProps) {
-  const kit = useMemo(() => new SatelliteKit(), [])
+  const gl = useThree((s) => s.gl)
+  const kit = useMemo(() => new SatelliteKit(gl), [gl])
 
   const orbits = useMemo(
     () =>
-      ORBITS.filter((o) => !reduced || o.essential).map((spec) => {
+      ORBITS.map((spec) => {
         const quat = orbitQuaternion(spec)
         const normal = new THREE.Vector3(0, 1, 0).applyQuaternion(quat)
         const geometry = buildRingGeometry(spec, quat)
@@ -91,23 +96,24 @@ export function OrbitalSystem({ mode, reduced, frozen, onSelect }: OrbitalSystem
         line.raycast = () => {}
         return { spec, quat, normal, line, material, geometry }
       }),
-    [reduced],
+    [],
   )
 
   const satellites = useMemo(() => {
     const orbitById = new Map(orbits.map((o) => [o.spec.id, o]))
-    return SATELLITES.filter((s) => (!reduced || s.essential) && orbitById.has(s.orbit)).map(
+    return SATELLITES.filter((s) => orbitById.has(s.orbit)).map(
       (spec, index) => {
         const orbit = orbitById.get(spec.orbit)!
-        const { model, beacon } = kit.build(spec.kind)
+        const { model, wings } = kit.build(spec.kind)
         const group = new THREE.Group()
         group.add(model)
         group.up.copy(orbit.normal)
         group.scale.setScalar(0)
-        return { spec, orbit, group, beacon, visibility: 0, blinkOffset: (index * 0.73) % 2.2 }
+        // Slightly different array angles per craft so they never look stamped out.
+        return { spec, orbit, group, wings, visibility: 0, wingBias: ((index * 0.37) % 1 - 0.5) * 0.25 }
       },
     )
-  }, [orbits, kit, reduced])
+  }, [orbits, kit])
 
   // Lead satellite per orbit drives its ring trail.
   const leads = useMemo(() => {
@@ -136,10 +142,11 @@ export function OrbitalSystem({ mode, reduced, frozen, onSelect }: OrbitalSystem
     const t = simTime.current
     const camera = state.camera
     _camDir.copy(camera.position).normalize()
-    const elapsed = state.clock.elapsedTime
+    const sun = getSunDirection()
 
     for (const o of orbits) {
-      const target = mode === 'gameplay' ? o.spec.gameplayOpacity : o.spec.showcaseOpacity
+      const modeTarget = mode === 'gameplay' ? o.spec.gameplayOpacity : o.spec.showcaseOpacity
+      const target = reduced && !o.spec.essential ? 0 : modeTarget
       const u = o.material.uniforms
       u.uOpacity.value = approach(u.uOpacity.value, target, 2, dt)
       o.line.visible = u.uOpacity.value > 0.003
@@ -172,8 +179,13 @@ export function OrbitalSystem({ mode, reduced, frozen, onSelect }: OrbitalSystem
       sat.group.visible = sat.visibility > 0.01
       sat.group.scale.setScalar(sat.spec.scale * sat.visibility)
 
-      const blink = frozen ? 1 : (elapsed + sat.blinkOffset) % 2.2 < 0.18 ? 1.6 : 0.55
-      sat.beacon.scale.setScalar(blink * (sat.spec.kind === 'station' ? 0.0028 : 0.0022))
+      // Sun tracking: turn each array about the craft's Y axis toward the Sun.
+      if (sat.group.visible && sat.wings.length) {
+        _inv.copy(sat.group.quaternion).invert()
+        _sunLocal.copy(sun).applyQuaternion(_inv)
+        const angle = Math.atan2(_sunLocal.x, _sunLocal.z) + sat.wingBias
+        for (const wing of sat.wings) wing.rotation.y = angle
+      }
     }
   })
 

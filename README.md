@@ -4,14 +4,17 @@ Interactive 3D geography game — singleplayer challenges and Socket.IO multipla
 
 ## Run locally
 
-Use two terminals:
+Start the frontend and multiplayer server together:
 
 ```bash
-# Terminal 1 — multiplayer server (port 3001)
-npm run dev:server
+npm run dev:all
+```
 
-# Terminal 2 — frontend (port 2002)
-npm run dev
+Or, if you are debugging a service, run them separately:
+
+```bash
+npm run dev:server # multiplayer server (port 3001)
+npm run dev        # frontend (port 2002)
 ```
 
 Open **http://127.0.0.1:2002**

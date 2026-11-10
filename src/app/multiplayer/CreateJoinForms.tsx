@@ -32,6 +32,8 @@ export function CreateJoinForms({
           value={nickname}
           maxLength={16}
           placeholder="Explorer"
+          autoComplete="nickname"
+          enterKeyHint={mode === 'create' ? 'done' : 'next'}
           onChange={(e) => onNickname(e.target.value)}
         />
       </label>
@@ -44,6 +46,8 @@ export function CreateJoinForms({
             inputMode="numeric"
             maxLength={4}
             placeholder="1234"
+            autoComplete="one-time-code"
+            enterKeyHint="go"
             onChange={(e) => onCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
           />
         </label>

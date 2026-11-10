@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import {
   DIFFICULTY_OPTIONS,
+  MAX_TIMER_SECONDS,
   MAX_ROUNDS,
+  MIN_TIMER_SECONDS,
   MIN_ROUNDS,
   ROUND_OPTIONS,
   TIMER_OPTIONS,
   clampRounds,
+  clampTimerSeconds,
   type GameConfig,
 } from '../../game'
 
@@ -21,11 +24,20 @@ export function GameSetupOptions({ config, onChange, readOnly = false }: GameSet
   const isPreset = ROUND_OPTIONS.includes(config.rounds)
   const [customOpen, setCustomOpen] = useState(!isPreset)
   const [draft, setDraft] = useState(String(config.rounds))
+  const isTimerPreset = TIMER_OPTIONS.includes(config.timerSeconds)
+  const [customTimerOpen, setCustomTimerOpen] = useState(!isTimerPreset)
+  const [timerDraft, setTimerDraft] = useState(String(config.timerSeconds))
 
   const commitCustom = (raw: string) => {
     const n = clampRounds(Number(raw))
     setDraft(String(n))
     onChange({ rounds: n })
+  }
+
+  const commitCustomTimer = (raw: string) => {
+    const n = clampTimerSeconds(Number(raw))
+    setTimerDraft(String(n))
+    onChange({ timerSeconds: n })
   }
 
   return (
@@ -104,13 +116,46 @@ export function GameSetupOptions({ config, onChange, readOnly = false }: GameSet
             <button
               key={n}
               type="button"
-              className={`option-pill ${config.timerSeconds === n ? 'is-active' : ''}`}
-              aria-pressed={config.timerSeconds === n}
-              onClick={() => onChange({ timerSeconds: n })}
+              className={`option-pill ${config.timerSeconds === n && !customTimerOpen ? 'is-active' : ''}`}
+              aria-pressed={config.timerSeconds === n && !customTimerOpen}
+              onClick={() => {
+                setCustomTimerOpen(false)
+                setTimerDraft(String(n))
+                onChange({ timerSeconds: n })
+              }}
             >
               {n}s
             </button>
           ))}
+          <button
+            type="button"
+            className={`option-pill ${customTimerOpen ? 'is-active' : ''}`}
+            aria-pressed={customTimerOpen}
+            onClick={() => {
+              setCustomTimerOpen(true)
+              setTimerDraft(String(config.timerSeconds))
+            }}
+          >
+            Custom
+          </button>
+          {customTimerOpen ? (
+            <label className="custom-rounds custom-timer">
+              <span className="sr-only">Custom round timer in seconds</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={MIN_TIMER_SECONDS}
+                max={MAX_TIMER_SECONDS}
+                value={timerDraft}
+                onChange={(e) => setTimerDraft(e.target.value)}
+                onBlur={(e) => commitCustomTimer(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') commitCustomTimer((e.target as HTMLInputElement).value)
+                }}
+              />
+              <span className="custom-rounds__hint">seconds · {MIN_TIMER_SECONDS}–{MAX_TIMER_SECONDS}</span>
+            </label>
+          ) : null}
         </div>
       </fieldset>
 

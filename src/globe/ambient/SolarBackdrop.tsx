@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { solarSun } from './solarSun'
 import { mulberry32 } from './motion'
+import { CELESTIAL, type CelestialSpec } from './planets'
 
 /**
  * Planets in order from the Sun. `k` = orbit radius as a multiple of Earth's orbit
@@ -97,6 +98,32 @@ function moonTexture(): THREE.CanvasTexture {
 interface SolarBackdropProps {
   visible: boolean
   frozen: boolean
+  /** Showcase only: the Sun, a planet or the Moon was clicked. */
+  onSelect?: (spec: CelestialSpec) => void
+}
+
+/** Invisible, generous click target (bodies are only a few pixels across). */
+function HitArea({ radius, spec, onSelect, position }: { radius: number; spec?: CelestialSpec; onSelect?: (spec: CelestialSpec) => void; position?: [number, number, number] }) {
+  if (!onSelect || !spec) return null
+  return (
+    <mesh
+      position={position}
+      onClick={(e) => {
+        e.stopPropagation()
+        onSelect(spec)
+      }}
+      onPointerOver={(e) => {
+        e.stopPropagation()
+        document.body.style.cursor = 'pointer'
+      }}
+      onPointerOut={() => {
+        document.body.style.cursor = ''
+      }}
+    >
+      <sphereGeometry args={[radius, 10, 8]} />
+      <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+    </mesh>
+  )
 }
 
 /**
@@ -113,7 +140,7 @@ const _n = new THREE.Vector3()
 const _basis = new THREE.Matrix4()
 
 
-export function SolarBackdrop({ visible, frozen }: SolarBackdropProps) {
+export function SolarBackdrop({ visible, frozen, onSelect }: SolarBackdropProps) {
   // The system is anchored in world space (like the starfield) from the view it first
   // appears in, so dragging the globe swings the Sun and planets past naturally.
   const anchor = useRef<{ quat: THREE.Quaternion; dist: number; fov: number; aspect: number } | null>(null)
@@ -239,6 +266,7 @@ export function SolarBackdrop({ visible, frozen }: SolarBackdropProps) {
               <sphereGeometry args={[3, 32, 24]} />
               <meshBasicMaterial color="#ffd54a" fog={false} toneMapped={false} />
             </mesh>
+            <HitArea radius={5} spec={CELESTIAL.sun} onSelect={onSelect} />
           </group>
           {/* Orbital plane through the Sun and the globe (x axis points at Earth). */}
           <group ref={plane}>
@@ -261,6 +289,7 @@ export function SolarBackdrop({ visible, frozen }: SolarBackdropProps) {
                       fog={false}
                     />
                   </mesh>
+                  <HitArea radius={Math.max(p.radius * 2.4, 1.1)} spec={CELESTIAL[p.name.toLowerCase()]} onSelect={onSelect} />
                   {p.ring ? (
                     <mesh rotation={[Math.PI / 2.4, 0, 0]} raycast={() => null}>
                       <ringGeometry args={[p.radius * 1.35, p.radius * 2.3, 48]} />
@@ -281,6 +310,7 @@ export function SolarBackdrop({ visible, frozen }: SolarBackdropProps) {
             <sphereGeometry args={[0.27, 48, 32]} />
             <meshStandardMaterial map={assets.moon} roughness={1} metalness={0} />
           </mesh>
+          <HitArea radius={0.55} position={[6.2, 0, 0]} spec={CELESTIAL.moon} onSelect={onSelect} />
         </group>
       </group>
     </>

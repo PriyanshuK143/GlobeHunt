@@ -1,11 +1,14 @@
 /** Shared multiplayer contracts used by the Vite client and Socket.IO server. */
 
 export type Difficulty = 'simple' | 'medium' | 'hard' | 'expert'
-/** Any whole number of rounds in [MIN_ROUNDS, MAX_ROUNDS]; presets are 5/10/15/20. */
+/** Any whole number of rounds in [MIN_ROUNDS, MAX_ROUNDS]; presets are 1/3/5/10. */
 export type RoundCount = number
 export const MIN_ROUNDS = 1
 export const MAX_ROUNDS = 50
-export type TimerSeconds = 15 | 30 | 45 | 60
+/** Any whole number of seconds in the supported custom timer range. */
+export type TimerSeconds = number
+export const MIN_TIMER_SECONDS = 5
+export const MAX_TIMER_SECONDS = 300
 
 export interface GameConfig {
   difficulty: Difficulty
@@ -70,11 +73,13 @@ export interface RoundReveal {
 }
 
 export interface ClientChallengeView {
-  id: string
+  /** Opaque per-round key. It deliberately cannot resolve to a public pool record. */
+  roundKey: string
   kind: 'country' | 'city' | 'feature'
   name: string
-  /** No coordinates or framing: the camera must not depend on the target. */
   featureKind?: string
+  /** Broad, target-independent regional camera anchor selected by the server. */
+  guide: { lat: number; lng: number; altitude: number }
 }
 
 /** Client → Server */

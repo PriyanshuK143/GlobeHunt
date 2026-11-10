@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   GlobeCanvas,
   HOME_CAMERA_ALTITUDE,
@@ -13,6 +13,7 @@ import { useSingleplayerGame } from '../game'
 import { useMultiplayer } from '../multiplayer/useMultiplayer'
 import { HomeScreen } from './HomeScreen'
 import { MainMenu } from './MainMenu'
+import { AudioStartPrompt } from './AudioStartPrompt'
 import { GameConfigPanel } from './GameConfigPanel'
 import { GameHUD } from './GameHUD'
 import { RoundResultOverlay } from './RoundResultOverlay'
@@ -30,7 +31,8 @@ import { CreditsScreen } from './CreditsScreen'
 import { HowToPlay } from './howto/HowToPlay'
 import { PauseMenu } from './pause/PauseMenu'
 import { SatelliteCard } from './SatelliteCard'
-import type { SatelliteSpec } from '../globe'
+import { PlanetCard } from './PlanetCard'
+import type { CelestialSpec, SatelliteSpec } from '../globe'
 import { audio } from '../audio'
 import { saveSettings } from '../settings/settings'
 import { loadSettings, type AppSettings } from '../settings/settings'
@@ -38,13 +40,12 @@ import { gameAudio } from '../settings/audio'
 import { useAudioSettings, useAudioUnlock } from '../audio'
 import { useGameAudio } from './useGameAudio'
 import { setTravelReducedMotion, travelTo } from '../game/navigation/travel'
-import { answerLocation, labelFilterFor, labelTargetFor, labelTargetForId, loadPool, poolEntryById, regionalRoundView } from '../game'
+import { answerLocation, labelFilterFor, labelTargetFor, labelTargetForMultiplayer } from '../game'
 import type { GlobeLabelsConfig } from '../globe'
 import { SpaceCorners } from './ambient/SpaceCorners'
 import { MarkerConfirm } from './MarkerConfirm'
 import { AmbientCommentary } from './ambient/AmbientCommentary'
 import { revealApp } from './launchVeil'
-import { ColorReveal } from './ColorReveal'
 import { takeInviteCode } from '../multiplayer/invite'
 import './game-ui.css'
 import './ambient/ambient.css'
@@ -61,6 +62,7 @@ export type AppMode =
 
 const HOME_VIEW = { lat: 12, lng: -55, altitude: HOME_CAMERA_ALTITUDE }
 const SCREEN_LEAVE_MS = 200
+const CREDITS_TRANSITION_MS = 620
 const MENU_VIEW = { lat: 15, lng: -70, altitude: MENU_CAMERA_ALTITUDE }
 
 export function AppShell() {
@@ -69,12 +71,17 @@ export function AppShell() {
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings())
   // Screen changes fade the current panel out briefly before the next one fades in.
   const [leaving, setLeaving] = useState(false)
-  // Set by the first click (colour reveal): the soundtrack starts only then.
-  const [entered, setEntered] = useState(false)
-  const handleEnter = useCallback(() => setEntered(true), [])
+  const [transitioning, setTransitioning] = useState(false)
+  const [creditsTransition, setCreditsTransition] = useState(false)
+  const [creditsIncoming, setCreditsIncoming] = useState(false)
+  const [menuIncoming, setMenuIncoming] = useState(false)
+  // The scene a menu ↔ credits crossfade just handed off to. It keeps its crossfaded
+  // state instead of replaying its normal entrance (which would blank it for a frame).
+  const [arrivedScene, setArrivedScene] = useState<'menu' | 'credits' | null>(null)
   // Opened from an invite link (?join=1234): the guest still starts on the Fly screen.
   const [inviteCode, setInviteCode] = useState<string | null>(() => takeInviteCode())
   const leaveTimer = useRef<number | null>(null)
+  const transitionLocked = useRef(false)
   const globeRef = useRef<GlobeNavigationApi | null>(null)
   const flashRef = useRef<HTMLDivElement>(null)
   const sp = useSingleplayerGame()
@@ -131,20 +138,14 @@ export function AppShell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode])
 
-  // Multiplayer regional fly on new challenge
+  const mpRoundKey = mp.challenge?.roundKey
+  const mpGuide = mp.challenge?.guide
+
+  // The server supplies an intentionally broad, target-independent regional anchor.
   useEffect(() => {
-    if (mode !== 'multiplayer' || mp.screen !== 'playing' || !mp.challenge) return
-    // Same regional guidance as singleplayer, from the shared pool (fits inside the
-    // server's travel window).
-    const id = mp.challenge.id
-    const difficulty = mp.room?.config.difficulty ?? 'simple'
-    void loadPool()
-      .then((pool) => {
-        const entry = poolEntryById(id)
-        if (entry) return travelTo(globeRef.current, regionalRoundView(entry, difficulty, pool), { maxMs: 2200 })
-      })
-      .catch(() => {})
-  }, [mode, mp.screen, mp.challenge?.id])
+    if (mode !== 'multiplayer' || mp.screen !== 'playing' || !mpGuide) return
+    void travelTo(globeRef.current, mpGuide, { maxMs: 2200 })
+  }, [mode, mp.screen, mpRoundKey, mpGuide])
 
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
@@ -158,7 +159,7 @@ export function AppShell() {
   const pickingEnabled = useMemo(() => {
     if (mode === 'singleplayer') return sp.pickingEnabled
     if (mode === 'multiplayer' && mp.screen === 'playing' && !mp.finished) {
-      return Boolean(mp.roundStartedAt && Date.now() >= mp.roundStartedAt)
+      return Boolean(mp.roundStartedAt && now >= mp.roundStartedAt)
     }
     return false
   }, [mode, sp.pickingEnabled, mp.screen, mp.finished, mp.roundStartedAt, now])
@@ -209,11 +210,11 @@ export function AppShell() {
     (mode === 'singleplayer' && sp.phase === 'playing' && sp.pickingEnabled) ||
     (mode === 'multiplayer' && mp.screen === 'playing' && !mp.finished)
   const commentaryRound =
-    mode === 'singleplayer' ? `sp-${sp.roundIndex}-${sp.currentChallenge?.id ?? ''}` : `mp-${mp.challenge?.id ?? ''}`
+    mode === 'singleplayer' ? `sp-${sp.roundIndex}-${sp.currentChallenge?.id ?? ''}` : `mp-${mp.challenge?.roundKey ?? ''}`
 
   // New challenge or leaving play → remove the previous target.
   const challengeKey =
-    mode === 'singleplayer' ? sp.currentChallenge?.id ?? null : mode === 'multiplayer' ? mp.challenge?.id ?? null : null
+    mode === 'singleplayer' ? sp.currentChallenge?.id ?? null : mode === 'multiplayer' ? mp.challenge?.roundKey ?? null : null
   useEffect(() => {
     marker.clear()
   }, [marker, challengeKey, mode])
@@ -247,20 +248,7 @@ export function AppShell() {
   // Atlas labels: only during a match, per the (host's) setup; answer labels hidden while searching.
   const showLabelsSetting =
     mode === 'multiplayer' ? mp.room?.config.showLabels ?? true : sp.config.showLabels
-  const searchTargetId =
-    mode === 'singleplayer' && (sp.phase === 'playing' || sp.phase === 'loading')
-      ? sp.currentChallenge?.id ?? null
-      : mode === 'multiplayer' && mp.screen === 'playing'
-        ? mp.challenge?.id ?? null
-        : null
-  // Multiplayer label suppression looks the target id up in the shared pool.
-  const [poolReady, setPoolReady] = useState(false)
-  useEffect(() => {
-    if (mode !== 'multiplayer' || poolReady) return
-    void loadPool()
-      .then(() => setPoolReady(true))
-      .catch(() => {})
-  }, [mode, poolReady])
+  const searchTargetId = mode === 'singleplayer' && (sp.phase === 'playing' || sp.phase === 'loading') ? sp.currentChallenge?.id ?? null : null
   // Same round index on every client → identical decoys in multiplayer.
   const searchRound = mode === 'multiplayer' ? mp.room?.roundIndex ?? 0 : sp.roundIndex
   const labelConfig = useMemo<GlobeLabelsConfig>(
@@ -269,17 +257,17 @@ export function AppShell() {
       filter: labelFilterFor(
         mode === 'singleplayer'
           ? labelTargetFor(sp.currentChallenge, searchRound)
-          : labelTargetForId(searchTargetId, searchRound, mp.challenge?.name),
+          : labelTargetForMultiplayer(mp.challenge?.name, mp.challenge?.kind, mp.challenge?.featureKind, mp.challenge?.roundKey),
       ),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [inMatch, showLabelsSetting, searchTargetId, searchRound, poolReady],
+    [inMatch, showLabelsSetting, searchTargetId, searchRound, mp.challenge?.roundKey],
   )
 
   useGameAudio({
-    // No soundtrack until the visitor has clicked into the game (the colour reveal).
+    // The first click only unlocks browser audio; the home screen stays in full colour.
     // How to Play has its own old-school "space class" tape music (no voices anywhere).
-    scene: !entered ? 'none' : mode === 'credits' ? 'credits' : mode === 'howto' ? 'howto' : inMatch ? 'gameplay' : 'home',
+    scene: mode === 'credits' ? 'credits' : mode === 'howto' ? 'howto' : inMatch ? 'gameplay' : 'home',
     marker,
     searching: activelySearching,
     challengeKey,
@@ -297,6 +285,16 @@ export function AppShell() {
   // ───────── Pause menu (ESC) ─────────
   const [pauseOpen, setPauseOpen] = useState(false)
   const [satellite, setSatellite] = useState<SatelliteSpec | null>(null)
+  const [planet, setPlanet] = useState<CelestialSpec | null>(null)
+  // One space card at a time: picking a satellite closes a planet card and vice versa.
+  const selectSatellite = (spec: SatelliteSpec) => {
+    setPlanet(null)
+    setSatellite(spec)
+  }
+  const selectPlanet = (spec: CelestialSpec) => {
+    setSatellite(null)
+    setPlanet(spec)
+  }
   const spLive = mode === 'singleplayer' && sp.phase === 'playing' && sp.pickingEnabled
   const mpLive = mode === 'multiplayer' && (mp.screen === 'playing' || mp.screen === 'round_result')
   useEffect(() => {
@@ -339,16 +337,36 @@ export function AppShell() {
 
   /** Fade the current screen out, then switch (instant with reduced motion). */
   const go = (next: AppMode, after?: () => void) => {
-    if (leaveTimer.current) window.clearTimeout(leaveTimer.current)
+    if (transitionLocked.current) return
+    const isCreditsHandoff = (mode === 'menu' && next === 'credits') || (mode === 'credits' && next === 'menu')
     const commit = () => {
       leaveTimer.current = null
       setMode(next)
+      setArrivedScene(isCreditsHandoff && !settings.reducedMotion && (next === 'menu' || next === 'credits') ? next : null)
       after?.()
       setLeaving(false)
+      const unlock = () => {
+        transitionLocked.current = false
+        setTransitioning(false)
+        setCreditsTransition(false)
+        setCreditsIncoming(false)
+        setMenuIncoming(false)
+      }
+      unlock()
     }
     if (settings.reducedMotion) return commit()
+    transitionLocked.current = true
+    setTransitioning(true)
+    setCreditsTransition(isCreditsHandoff)
+    if (isCreditsHandoff) {
+      // Mount the next scene immediately so its opacity can overlap the outgoing scene.
+      // The audio engine is idempotent and crossfades this scene change on its own buses.
+      if (next === 'credits') setCreditsIncoming(true)
+      else setMenuIncoming(true)
+      audio.setScene(next === 'credits' ? 'credits' : 'home')
+    }
     setLeaving(true)
-    leaveTimer.current = window.setTimeout(commit, SCREEN_LEAVE_MS)
+    leaveTimer.current = window.setTimeout(commit, isCreditsHandoff ? CREDITS_TRANSITION_MS : SCREEN_LEAVE_MS)
   }
   useEffect(() => () => {
     if (leaveTimer.current) window.clearTimeout(leaveTimer.current)
@@ -369,6 +387,7 @@ export function AppShell() {
   const goHome = () => {
     gameAudio.play('click', settings)
     setSatellite(null)
+    setPlanet(null)
     setLeaving(true)
     returningHome.current = true
     // The menu fades out fast; the camera pulls back while the Fly screen fades in over
@@ -379,6 +398,7 @@ export function AppShell() {
     leaveTimer.current = window.setTimeout(() => {
       leaveTimer.current = null
       setMode('home')
+      setArrivedScene(null)
       setLeaving(false)
     }, settings.reducedMotion ? 0 : 380)
   }
@@ -396,9 +416,10 @@ export function AppShell() {
 
   return (
     <main
-      className={`game-shell ${inMatch ? 'is-playing' : ''} ${leaving ? 'is-leaving' : ''} ${settings.reducedMotion ? 'reduce-motion' : ''}`}
+      className={`game-shell ${inMatch ? 'is-playing' : ''} ${leaving ? 'is-leaving' : ''} ${transitioning ? 'is-transitioning' : ''} ${creditsTransition ? 'is-credits-transition' : ''} ${settings.reducedMotion ? 'reduce-motion' : ''}`}
     >
       <div className="game-shell__glow" aria-hidden />
+      {transitioning ? <div className="scene-transition-shield" aria-hidden /> : null}
       <GlobeCanvas
         ref={globeRef}
         pickingEnabled={pickingEnabled}
@@ -407,12 +428,14 @@ export function AppShell() {
         rotateSpeed={0.35 + settings.orbitSensitivity * 0.4}
         ambient={ambient}
         marker={marker}
-        paused={mode === 'credits' || mode === 'howto'}
+        // Resume as soon as the menu starts fading in over it, not after the handoff.
+        paused={(mode === 'credits' && !menuIncoming) || mode === 'howto'}
         labels={labelConfig}
-        onSatelliteSelect={inMatch ? undefined : setSatellite}
+        onSatelliteSelect={inMatch ? undefined : selectSatellite}
+        onPlanetSelect={inMatch ? undefined : selectPlanet}
       />
       <MarkerConfirm store={marker} enabled={pickingEnabled} onConfirm={onGlobePick} />
-      {mode !== 'credits' && mode !== 'howto' && mode !== 'exit' ? (
+      {(mode !== 'credits' || menuIncoming) && mode !== 'howto' && mode !== 'exit' ? (
         <SpaceCorners
           mode={inMatch ? 'gameplay' : 'showcase'}
           showTracking={settings.ambientEffects !== 'off'}
@@ -423,12 +446,13 @@ export function AppShell() {
         cycleKey={commentaryRound}
       />
       <div ref={flashRef} className="feedback-flash" aria-hidden />
+      <AudioStartPrompt muted={settings.muted} />
 
-      <ColorReveal disabled={settings.reducedMotion} onEnter={handleEnter} />
       {mode === 'home' ? <HomeScreen flying={flyingIn} onFly={handleFly} inviteCode={inviteCode} returning={returningHome.current} /> : null}
 
-      {mode === 'menu' ? (
-        <MainMenu
+      {mode === 'menu' || menuIncoming ? (
+        <div className={menuIncoming ? 'scene-transition-incoming' : arrivedScene === 'menu' ? 'scene-transition-arrived' : undefined}>
+          <MainMenu
           onSingleplayer={() => {
             gameAudio.play('click', settings)
             go('singleplayer')
@@ -458,8 +482,9 @@ export function AppShell() {
             go('howto')
           }}
           onBack={goHome}
-          inviteCode={inviteCode}
-        />
+            inviteCode={inviteCode}
+          />
+        </div>
       ) : null}
 
       {mode === 'singleplayer' && sp.phase === 'config' ? (
@@ -586,6 +611,10 @@ export function AppShell() {
         <SatelliteCard spec={satellite} onClose={() => setSatellite(null)} />
       ) : null}
 
+      {planet && !inMatch && (mode === 'home' || mode === 'menu') ? (
+        <PlanetCard key={planet.id} spec={planet} onClose={() => setPlanet(null)} />
+      ) : null}
+
       {pauseOpen && inMatch ? (
         <PauseMenu
           multiplayer={mode === 'multiplayer'}
@@ -607,11 +636,13 @@ export function AppShell() {
         />
       ) : null}
 
-      {mode === 'credits' ? (
-        <CreditsScreen
-          reducedMotion={settings.reducedMotion}
-          onBack={() => go('menu')}
-        />
+      {mode === 'credits' || creditsIncoming ? (
+        <div className={creditsIncoming ? 'scene-transition-incoming' : arrivedScene === 'credits' ? 'scene-transition-arrived' : undefined}>
+          <CreditsScreen
+            reducedMotion={settings.reducedMotion}
+            onBack={() => go('menu')}
+          />
+        </div>
       ) : null}
     </main>
   )

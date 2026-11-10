@@ -88,7 +88,7 @@ const _camDir = new THREE.Vector3()
  * picking and lat/lng math are unaffected. Loads are prioritised by distance to the
  * view centre, capped in flight, and evicted LRU with full GPU disposal.
  */
-export function DetailTiles({ maxLevel = GIBS_MAX_LEVEL }: { maxLevel?: number }) {
+export function DetailTiles({ maxLevel = GIBS_MAX_LEVEL, maxCached = MAX_CACHED }: { maxLevel?: number; maxCached?: number }) {
   const camera = useThree((s) => s.camera)
   const group = useMemo(() => new THREE.Group(), [])
   const cache = useRef(new Map<string, TileEntry>())
@@ -207,11 +207,11 @@ export function DetailTiles({ maxLevel = GIBS_MAX_LEVEL }: { maxLevel?: number }
     visibleKeys.current = next
 
     // LRU eviction of tiles no longer needed.
-    if (cache.current.size > MAX_CACHED) {
+    if (cache.current.size > maxCached) {
       const evictable = [...cache.current.values()]
         .filter((e) => !next.has(e.key) && e.state !== 'loading')
         .sort((a, b) => a.lastUsed - b.lastUsed)
-      for (const entry of evictable.slice(0, cache.current.size - MAX_CACHED)) {
+      for (const entry of evictable.slice(0, cache.current.size - maxCached)) {
         dispose(entry)
         cache.current.delete(entry.key)
       }

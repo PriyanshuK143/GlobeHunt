@@ -3,6 +3,7 @@ import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import { EARTH_RADIUS } from './navigation/geo'
 import { DetailTiles, applyOceanSpecular } from './imagery'
+import { TILE_CACHE_FOR_TIER } from './performanceTier'
 
 /**
  * NASA Blue Marble shaded relief + bathymetry (public domain), stitched from the
@@ -52,7 +53,7 @@ export function Earth({ quality = 'high' }: EarthProps) {
         <sphereGeometry args={[EARTH_RADIUS, SEGMENTS, SEGMENTS / 2]} />
       </mesh>
 
-      <DetailTiles maxLevel={DETAIL_LEVEL[quality]} />
+      <DetailTiles maxLevel={DETAIL_LEVEL[quality]} maxCached={TILE_CACHE_FOR_TIER[quality]} />
 
     </group>
   )

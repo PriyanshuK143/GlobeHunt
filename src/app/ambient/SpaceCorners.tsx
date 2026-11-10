@@ -14,6 +14,67 @@ function useClock(intervalMs = 1000): Date {
   return now
 }
 
+/** Samples frame cadence without causing per-frame React renders. */
+function useLiveFps(enabled: boolean): number | null {
+  const [fps, setFps] = useState<number | null>(null)
+  useEffect(() => {
+    if (!enabled) {
+      setFps(null)
+      return
+    }
+    let frame = 0
+    let began = performance.now()
+    let raf = 0
+    const tick = (now: number) => {
+      frame++
+      const elapsed = now - began
+      if (elapsed >= 750) {
+        setFps(Math.round((frame * 1000) / elapsed))
+        frame = 0
+        began = now
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [enabled])
+  return fps
+}
+
+/** Real round-trip to the game server; a dash means the server is temporarily unavailable. */
+function useServerPing(enabled: boolean): number | null {
+  const [ping, setPing] = useState<number | null>(null)
+  useEffect(() => {
+    if (!enabled) {
+      setPing(null)
+      return
+    }
+    let cancelled = false
+    let timer: number | undefined
+    const base = (import.meta.env.VITE_SERVER_URL as string | undefined)?.replace(/\/$/, '') ?? ''
+    const probe = async () => {
+      const controller = new AbortController()
+      const timeout = window.setTimeout(() => controller.abort(), 3_000)
+      const began = performance.now()
+      try {
+        const response = await fetch(`${base}/health`, { cache: 'no-store', signal: controller.signal })
+        if (!cancelled) setPing(response.ok ? Math.round(performance.now() - began) : null)
+      } catch {
+        if (!cancelled) setPing(null)
+      } finally {
+        window.clearTimeout(timeout)
+        if (!cancelled) timer = window.setTimeout(probe, 5_000)
+      }
+    }
+    void probe()
+    return () => {
+      cancelled = true
+      if (timer !== undefined) window.clearTimeout(timer)
+    }
+  }, [enabled])
+  return ping
+}
+
 const TRACKED = SATELLITES.filter((s) => s.essential)
 
 /** Small Orion-like constellation glyph. */
@@ -34,7 +95,7 @@ function Constellation() {
 }
 
 interface SpaceCornersProps {
-  /** Gameplay shows only the minimal bottom-right indicator. */
+  /** Gameplay shows only the clock (top-left) and FPS / ping (top-right). */
   mode: 'showcase' | 'gameplay'
   showTracking: boolean
 }
@@ -51,10 +112,23 @@ export function SpaceCorners({ mode, showTracking }: SpaceCornersProps) {
     .toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })
     .toUpperCase()
   const gameplay = mode === 'gameplay'
+  const fps = useLiveFps(gameplay)
+  const ping = useServerPing(gameplay)
 
   return (
     <div className={`space-corners ${gameplay ? 'is-gameplay' : ''}`} aria-hidden>
-      {!gameplay ? (
+      {gameplay ? (
+        <>
+          <div className="space-corner space-corner--tl">
+            <span className="space-corner__label">{time} UTC</span>
+          </div>
+          <div className="space-corner space-corner--tr">
+            <span className="space-corner__performance">
+              <b>FPS</b> {fps ?? '—'} <i aria-hidden>·</i> <b>PING</b> {ping === null ? '—' : `${ping}ms`}
+            </span>
+          </div>
+        </>
+      ) : (
         <>
           <div className="space-corner space-corner--tl">
             <span className="space-corner__label">
@@ -85,19 +159,18 @@ export function SpaceCorners({ mode, showTracking }: SpaceCornersProps) {
               </ul>
             </div>
           ) : null}
-        </>
-      ) : null}
 
-      <div className="space-corner space-corner--br">
-        {!gameplay ? <Constellation /> : null}
-        <div className="space-corner__stack">
-          <span className="space-corner__label">{gameplay ? `${time} UTC` : 'Rotation'}</span>
-          <span className="space-corner__meta">
-            {gameplay ? `Sun ${formatCoord(sun.lat, 'N', 'S')} ${formatCoord(sun.lng, 'E', 'W')}` : '15.04° / hour'}
-          </span>
-          <span className="space-corner__credit">Imagery: NASA · Map data: Natural Earth, GeoNames (CC BY 4.0)</span>
-        </div>
-      </div>
+          {/* Rotation + data credits live on the home / menu screens only. */}
+          <div className="space-corner space-corner--br">
+            <Constellation />
+            <div className="space-corner__stack">
+              <span className="space-corner__label">Rotation</span>
+              <span className="space-corner__meta">15.04° / hour</span>
+              <span className="space-corner__credit">Imagery: NASA · Map data: Natural Earth, GeoNames (CC BY 4.0)</span>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

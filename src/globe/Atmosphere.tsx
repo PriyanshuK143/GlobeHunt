@@ -3,13 +3,13 @@ import * as THREE from 'three'
 import { EARTH_RADIUS } from './navigation/geo'
 import { useSunDirection } from './ambient/useSunDirection'
 
-const atmosphereVertex = /* glsl */ `
-  varying vec3 vNormal;
+/** Outer edge of the halo shell (camera never comes closer than 1.08). */
+const HALO_RADIUS = EARTH_RADIUS * 1.065
+
+const vertex = /* glsl */ `
   varying vec3 vWorldNormal;
   varying vec3 vWorldPosition;
-
   void main() {
-    vNormal = normalize(normalMatrix * normal);
     vWorldNormal = normalize(mat3(modelMatrix) * normal);
     vec4 worldPos = modelMatrix * vec4(position, 1.0);
     vWorldPosition = worldPos.xyz;
@@ -17,63 +17,111 @@ const atmosphereVertex = /* glsl */ `
   }
 `
 
-const atmosphereFragment = /* glsl */ `
-  uniform vec3 glowColor;
+/** Shared day / night / twilight tint for a direction from Earth's centre. */
+const tint = /* glsl */ `
+  uniform vec3 dayColor;
+  uniform vec3 nightColor;
   uniform vec3 twilightColor;
   uniform vec3 sunDirection;
-  uniform float coefficient;
-  uniform float power;
   uniform float nightFloor;
-  varying vec3 vNormal;
-  varying vec3 vWorldNormal;
-  varying vec3 vWorldPosition;
-
-  void main() {
-    vec3 viewDir = normalize(cameraPosition - vWorldPosition);
-    float intensity = pow(coefficient + dot(vNormal, viewDir), power);
-    intensity = clamp(intensity, 0.0, 1.0);
-
-    // Day side scatters more light; night side keeps a faint rim.
-    float sunDot = dot(normalize(vWorldNormal), sunDirection);
-    float day = smoothstep(-0.35, 0.55, sunDot);
-    float twilight = 1.0 - smoothstep(0.0, 0.32, abs(sunDot + 0.05));
-
-    vec3 color = mix(glowColor, twilightColor, twilight * 0.55);
-    float lit = mix(nightFloor, 0.7, day) + twilight * 0.12;
-    gl_FragColor = vec4(color, 1.0) * intensity * lit;
+  vec3 limbTint(vec3 dir, out float lit) {
+    float sunDot = dot(dir, sunDirection);
+    float day = smoothstep(-0.3, 0.45, sunDot);
+    float twilight = 1.0 - smoothstep(0.0, 0.3, abs(sunDot + 0.04));
+    vec3 color = mix(nightColor, dayColor, day);
+    color = mix(color, twilightColor, twilight * 0.45);
+    // The night side keeps a clearly visible rim so the globe never melts into space.
+    lit = mix(nightFloor, 1.0, day) + twilight * 0.15;
+    return color;
   }
 `
 
-/** Thin, natural Fresnel atmosphere limb (slightly brighter on the sunlit side). */
+/**
+ * Halo outside the disk. Per pixel, find how close the view ray passes to Earth's
+ * centre: brightest where it grazes the surface, fading out by the shell edge — an even
+ * band around the whole limb at any zoom. (Rays that hit Earth are hidden by depth.)
+ */
+const haloFragment = /* glsl */ `
+  uniform float radius;
+  uniform float shell;
+  uniform float strength;
+  varying vec3 vWorldPosition;
+  ${tint}
+  void main() {
+    vec3 rd = normalize(vWorldPosition - cameraPosition);
+    vec3 closest = cameraPosition + rd * max(0.0, -dot(cameraPosition, rd));
+    float h = length(closest);
+    float t = clamp((h - radius) / (shell - radius), 0.0, 1.0);
+    float glow = exp(-t * 4.2) * (1.0 - t * t);
+    float lit;
+    vec3 color = limbTint(normalize(closest), lit);
+    gl_FragColor = vec4(color * glow * lit * strength, 1.0);
+  }
+`
+
+/** Thin haze on the disk edge itself, so the silhouette stays crisp over dark ground. */
+const rimFragment = /* glsl */ `
+  uniform float strength;
+  varying vec3 vWorldNormal;
+  varying vec3 vWorldPosition;
+  ${tint}
+  void main() {
+    vec3 n = normalize(vWorldNormal);
+    vec3 viewDir = normalize(cameraPosition - vWorldPosition);
+    float f = 1.0 - max(dot(n, viewDir), 0.0);
+    float rim = pow(f, 3.2);
+    float lit;
+    vec3 color = limbTint(n, lit);
+    gl_FragColor = vec4(color * rim * lit * strength, 1.0);
+  }
+`
+
+/** Atmosphere: a halo around the limb plus edge haze, brighter on the sunlit side. */
 export function Atmosphere() {
-  const uniforms = useMemo(
-    () => ({
-      glowColor: { value: new THREE.Color('#4db2ff') },
+  const uniforms = useMemo(() => {
+    const shared = {
+      dayColor: { value: new THREE.Color('#5cbcff') },
+      nightColor: { value: new THREE.Color('#2d6ad8') },
       twilightColor: { value: new THREE.Color('#ff9a5c') },
       sunDirection: { value: new THREE.Vector3(1, 0, 0) },
-      coefficient: { value: 0.2 },
-      power: { value: 6 },
-      nightFloor: { value: 0.35 },
-    }),
-    [],
-  )
+      nightFloor: { value: 0.5 },
+    }
+    return {
+      halo: { ...shared, radius: { value: EARTH_RADIUS }, shell: { value: HALO_RADIUS }, strength: { value: 0.82 } },
+      rim: { ...shared, strength: { value: 0.4 } },
+    }
+  }, [])
 
   useSunDirection((dir) => {
-    uniforms.sunDirection.value.copy(dir)
+    // Shared uniform objects: one copy updates both layers.
+    uniforms.halo.sunDirection.value.copy(dir)
   })
 
   return (
-    <mesh scale={1.022} raycast={() => null}>
-      <sphereGeometry args={[EARTH_RADIUS, 64, 64]} />
-      <shaderMaterial
-        vertexShader={atmosphereVertex}
-        fragmentShader={atmosphereFragment}
-        uniforms={uniforms}
-        transparent
-        depthWrite={false}
-        side={THREE.BackSide}
-        blending={THREE.AdditiveBlending}
-      />
-    </mesh>
+    <>
+      <mesh scale={HALO_RADIUS / EARTH_RADIUS} raycast={() => null}>
+        <sphereGeometry args={[EARTH_RADIUS, 96, 64]} />
+        <shaderMaterial
+          vertexShader={vertex}
+          fragmentShader={haloFragment}
+          uniforms={uniforms.halo}
+          transparent
+          depthWrite={false}
+          side={THREE.BackSide}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+      <mesh scale={1.004} raycast={() => null}>
+        <sphereGeometry args={[EARTH_RADIUS, 96, 64]} />
+        <shaderMaterial
+          vertexShader={vertex}
+          fragmentShader={rimFragment}
+          uniforms={uniforms.rim}
+          transparent
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+    </>
   )
 }

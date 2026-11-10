@@ -11,16 +11,8 @@ export function useAudioUnlocked(): boolean {
   )
 }
 
-/**
- * Starts audio as early as the browser allows: an automatic attempt shortly after load
- * (works where the site is allowed to autoplay), otherwise on the first click / key /
- * touch anywhere on the page. The first music always fades in slowly.
- */
+/** Unlocks audio on the first player gesture, as required by browser audio policies. */
 export function useAudioUnlock(): void {
-  useEffect(() => {
-    const id = window.setTimeout(() => audio.tryAutoStart(), 1200)
-    return () => window.clearTimeout(id)
-  }, [])
   useEffect(() => {
     const unlock = () => audio.unlock()
     const opts = { capture: true, passive: true } as const

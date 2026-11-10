@@ -137,22 +137,25 @@ function Cupboard() {
 
 /* ───────── Ceiling fan, turning slowly ───────── */
 
+/** Hangs from the middle of the ceiling, over the circle of friends. */
+const FAN_X = 800
+
 function CeilingFan() {
   return (
     <g stroke={INK} strokeWidth={3} strokeLinejoin="round">
-      <rect x={926} y={-60} width={8} height={142} fill="#7a5430" />
-      <ellipse cx={930} cy={84} rx={26} ry={11} fill="#8f6538" />
+      <rect x={FAN_X - 4} y={-60} width={8} height={142} fill="#7a5430" />
+      <ellipse cx={FAN_X} cy={84} rx={26} ry={11} fill="#8f6538" />
       {/* blades in perspective: rotate inside a vertically squashed group */}
-      <g transform="translate(930 88) scale(1 0.26)">
+      <g transform={`translate(${FAN_X} 88) scale(1 0.26)`}>
         <g>
           <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="1.6s" repeatCount="indefinite" />
           {[0, 120, 240].map((a) => (
-            <path key={a} transform={`rotate(${a})`} d="M14 -10 L150 -26 Q162 0 150 26 L14 10 Z" fill="#c9a36a" strokeWidth={6} />
+            <path key={a} transform={`rotate(${a})`} d="M14 -10 L124 -24 Q135 0 124 24 L14 10 Z" fill="#c9a36a" strokeWidth={6} />
           ))}
           <circle r={22} fill="#7a5430" strokeWidth={6} />
         </g>
       </g>
-      <ellipse cx={930} cy={96} rx={12} ry={6} fill="#6a4322" />
+      <ellipse cx={FAN_X} cy={96} rx={12} ry={6} fill="#6a4322" />
     </g>
   )
 }
@@ -167,8 +170,8 @@ export const Room = memo(function Room() {
         <path key={i} d={`M${-200 + i * 150},480 L${-420 + i * 190},1200`} stroke="rgba(60,30,10,0.18)" strokeWidth={3} />
       ))}
       <rect x={-200} y={470} width={2000} height={18} fill="#8f6538" stroke={INK} strokeWidth={2} />
-      {/* chalkboard */}
-      <g>
+      {/* chalkboard (left wall) */}
+      <g transform="translate(-30 0)">
         <rect x={140} y={90} width={430} height={240} rx={6} fill="#4a3a28" stroke="#6e4a26" strokeWidth={14} />
         <text x={180} y={150} fontFamily="'Patrick Hand', cursive" fontSize={34} fill="#e9dcc0" opacity={0.8}>
           Geography
@@ -179,19 +182,19 @@ export const Room = memo(function Room() {
         <path d="M200,240 q40,-30 80,0 t80,0 t80,0" stroke="#e9dcc0" strokeWidth={3} fill="none" opacity={0.45} />
         <ellipse cx={470} cy={270} rx={34} ry={20} fill="none" stroke="#e9dcc0" strokeWidth={3} opacity={0.4} />
       </g>
-      {/* window with warm light, the tree and sparrows outside, frame on top */}
-      <g>
+      {/* window with warm light, the tree and sparrows outside, frame on top; its light
+          falls on the floor. Shifted left to leave the corner for the cupboard. */}
+      <g transform="translate(-100 0)">
         <rect x={1090} y={70} width={320} height={300} fill="#f7e2a6" />
         <circle cx={1180} cy={150} r={40} fill="#fff1c4" opacity={0.9} />
         <WindowTree />
         <rect x={1090} y={70} width={320} height={300} fill="none" stroke="#7a5430" strokeWidth={14} />
         <path d="M1250,70 L1250,370 M1090,220 L1410,220" stroke="#7a5430" strokeWidth={10} />
+        <path d="M1100,370 L640,900 L1200,900 L1410,370 Z" fill="#fff2c8" opacity={0.16} />
+        <path d="M1250,370 L900,900 L1100,900 L1330,370 Z" fill="#fff2c8" opacity={0.12} />
       </g>
-      <path d="M1100,370 L640,900 L1200,900 L1410,370 Z" fill="#fff2c8" opacity={0.16} />
-      <path d="M1250,370 L900,900 L1100,900 L1330,370 Z" fill="#fff2c8" opacity={0.12} />
-      {/* globe on a shelf */}
-      <g>
-        <rect x={700} y={250} width={190} height={14} fill="#7a5430" stroke={INK} strokeWidth={2} />
+      {/* desk globe standing on top of the corner cupboard */}
+      <g transform="translate(704 -64)">
         <circle cx={795} cy={200} r={42} fill="#c9a36a" stroke={INK} strokeWidth={3} />
         <path d="M770,180 q20,-12 30,6 q14,10 -6,22 q-18,6 -24,-8 Z M808,214 q10,-4 14,6 q-4,10 -12,4 Z" fill="#8e6a3a" />
         <path d="M795,158 L795,248 M772,250 L818,250" stroke={INK} strokeWidth={3} />
@@ -202,7 +205,7 @@ export const Room = memo(function Room() {
         <ellipse cx={800} cy={700} rx={500} ry={172} fill="none" stroke="#e8c58a" strokeWidth={16} />
         <ellipse cx={800} cy={700} rx={420} ry={140} fill="none" stroke="#9c4f27" strokeWidth={10} />
       </g>
-      <g transform="translate(-528 0)">
+      <g transform="translate(-16 0)">
         <Cupboard />
       </g>
       <CeilingFan />

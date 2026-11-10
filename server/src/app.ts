@@ -14,6 +14,8 @@ export interface GameServerOptions {
   trustProxy: boolean
   /** Also accept origins on private LAN addresses (local-network play). */
   allowLan?: boolean
+  /** Production browsers always send Origin; reject originless sockets there. */
+  allowNonBrowser?: boolean
   timings?: MatchTimings
 }
 
@@ -66,7 +68,7 @@ export function createGameServer(opts: GameServerOptions): GameServer {
   if (opts.trustProxy) app.set('trust proxy', true)
 
   const originAllowed = (origin: string | undefined) =>
-    !origin || opts.allowedOrigins.includes(origin) || (!!opts.allowLan && isPrivateLanOrigin(origin))
+    (!origin && opts.allowNonBrowser !== false) || opts.allowedOrigins.includes(origin ?? '') || (!!opts.allowLan && !!origin && isPrivateLanOrigin(origin))
   const corsOrigin = (origin: string | undefined, cb: (err: Error | null, ok?: boolean) => void) =>
     cb(null, originAllowed(origin))
 
@@ -74,6 +76,8 @@ export function createGameServer(opts: GameServerOptions): GameServer {
     res.setHeader('X-Content-Type-Options', 'nosniff')
     res.setHeader('X-Frame-Options', 'DENY')
     res.setHeader('Referrer-Policy', 'no-referrer')
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin')
+    res.setHeader('Cross-Origin-Resource-Policy', 'same-origin')
     next()
   })
   app.use(cors({ origin: corsOrigin }))
@@ -81,6 +85,7 @@ export function createGameServer(opts: GameServerOptions): GameServer {
   const startedAt = Date.now()
   const rooms = new RoomManager()
   app.get('/health', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store')
     res.json({ ok: true, service: 'globehunt-server', rooms: rooms.roomCount, uptime: Math.round((Date.now() - startedAt) / 1000) })
   })
 

@@ -1,3 +1,5 @@
+import { initialTier } from '../globe/performanceTier'
+
 export type GraphicsQuality = 'low' | 'medium' | 'high'
 export type AmbientEffects = 'full' | 'reduced' | 'off'
 /** Player-facing motion level: everything moves / moves gently / stays still. */
@@ -47,7 +49,8 @@ export function withVisualPrefs(s: AppSettings): AppSettings {
     ...s,
     reducedMotion: s.motion === 'off',
     ambientEffects: !s.visuals ? 'off' : s.motion === 'reduced' ? 'reduced' : 'full',
-    graphicsQuality: 'high',
+    // Per device: lighter scene on low-end laptops / phones (see globe/performanceTier).
+    graphicsQuality: initialTier(),
     orbitSensitivity: DEFAULT_SETTINGS.orbitSensitivity,
   }
 }
@@ -71,11 +74,11 @@ export function loadSettings(): AppSettings {
     const legacy = localStorage.getItem(LEGACY_KEY)
     if (legacy) {
       const parsed = JSON.parse(legacy) as Partial<AppSettings>
-      return { ...DEFAULT_SETTINGS, ...parsed, ambientEffects: 'full' }
+      return { ...DEFAULT_SETTINGS, ...parsed, ambientEffects: 'full', graphicsQuality: initialTier() }
     }
-    return { ...DEFAULT_SETTINGS }
+    return { ...DEFAULT_SETTINGS, graphicsQuality: initialTier() }
   } catch {
-    return { ...DEFAULT_SETTINGS }
+    return { ...DEFAULT_SETTINGS, graphicsQuality: initialTier() }
   }
 }
 

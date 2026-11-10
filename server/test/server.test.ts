@@ -135,6 +135,17 @@ test('config is locked during a match', async () => {
   assert.equal(join.ok, false)
 })
 
+test('host can use a custom whole-second timer within the supported range', async () => {
+  const { host, code } = await room(['TimerHost'])
+  host.emit('room_set_config', { rounds: 3, timerSeconds: 73 })
+  await wait(80)
+  assert.equal(server.rooms.getRoom(code)!.config.rounds, 3)
+  assert.equal(server.rooms.getRoom(code)!.config.timerSeconds, 73)
+  host.emit('room_set_config', { timerSeconds: 4 })
+  await wait(80)
+  assert.equal(server.rooms.getRoom(code)!.config.timerSeconds, 73)
+})
+
 test('round start sends no answer data; early answers are rejected', async () => {
   const host = await client()
   const created = await call(host, 'room_create', { nickname: 'Golf' })
@@ -144,8 +155,9 @@ test('round start sends no answer data; early answers are rejected', async () =>
   await wait(50)
   await call(host, 'room_start')
   await wait(30)
-  assert.deepEqual(Object.keys(starts[0].challenge).sort(), ['featureKind', 'id', 'kind', 'name'].filter((k) => k in starts[0].challenge).sort())
-  assert.ok(!('point' in starts[0].challenge) && !('v' in starts[0].challenge))
+  assert.deepEqual(Object.keys(starts[0].challenge).sort(), ['featureKind', 'guide', 'kind', 'name', 'roundKey'].filter((k) => k in starts[0].challenge).sort())
+  assert.ok(!('id' in starts[0].challenge) && !('point' in starts[0].challenge) && !('v' in starts[0].challenge))
+  assert.deepEqual(Object.keys((starts[0].challenge.guide as Record<string, unknown>)).sort(), ['altitude', 'lat', 'lng'])
   // During the travel window the exact answer must not score.
   const early = await call(host, 'match_submit_answer', at(currentTarget(created.room.code)))
   assert.equal(early.ok, false)

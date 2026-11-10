@@ -6,7 +6,12 @@ if (config.production && config.allowedOrigins.length === 0) {
   process.exit(1)
 }
 
-const server = createGameServer({ allowedOrigins: config.allowedOrigins, trustProxy: config.trustProxy, allowLan: config.allowLan })
+const server = createGameServer({
+  allowedOrigins: config.allowedOrigins,
+  trustProxy: config.trustProxy,
+  allowLan: config.allowLan,
+  allowNonBrowser: !config.production,
+})
 
 const port = await server.listen(config.port, config.host)
 console.log(`[GLOBEHUNT] Multiplayer server listening on ${config.host}:${port} (origins: ${config.allowedOrigins.join(', ') || 'none'}${config.allowLan ? ' + private LAN' : ''})`)

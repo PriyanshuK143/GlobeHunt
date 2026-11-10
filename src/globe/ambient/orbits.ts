@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 
-export type SatelliteKind = 'comm' | 'observer' | 'station'
+export type SatelliteKind = 'comm' | 'observer' | 'telescope' | 'station'
 
 export interface OrbitSpec {
   id: string
@@ -57,7 +57,7 @@ export const SATELLITES: SatelliteSpec[] = [
     info: { type: 'Crewed space station', operator: 'NASA, Roscosmos, ESA, JAXA, CSA', launched: '1998 (first module)', orbit: 'Low Earth orbit, ~400 km', fact: 'Continuously crewed since November 2000; it circles Earth about every 90 minutes.' },
   },
   {
-    id: 'hubble', label: 'Hubble Space Telescope', kind: 'observer', orbit: 'leo', phase: 0.6, period: 80, scale: 1, essential: false,
+    id: 'hubble', label: 'Hubble Space Telescope', kind: 'telescope', orbit: 'leo', phase: 0.6, period: 80, scale: 1, essential: false,
     info: { type: 'Space telescope', operator: 'NASA / ESA', launched: '1990', orbit: 'Low Earth orbit, ~540 km', fact: 'Observes in ultraviolet, visible and near-infrared light from above the atmosphere.' },
   },
   {

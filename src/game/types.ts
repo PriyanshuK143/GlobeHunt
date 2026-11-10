@@ -1,9 +1,10 @@
 import type { PoolDifficulty, PoolEntry, PoolFeatureKind } from '../../shared/geoPool'
 
 export type Difficulty = PoolDifficulty
-/** Whole number of rounds (presets 5/10/15/20 or a custom count). */
+/** Whole number of rounds (presets 1/3/5/10 or a custom count). */
 export type RoundCount = number
-export type TimerSeconds = 15 | 30 | 45 | 60
+/** Whole seconds; presets are 5/15/30/45 and custom values are 5–300. */
+export type TimerSeconds = number
 
 export interface GameConfig {
   difficulty: Difficulty

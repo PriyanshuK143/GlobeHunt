@@ -44,7 +44,7 @@ export class MatchController {
     if (!match || room.phase !== 'playing' || !challenge) return null
     return {
       room: this.rooms.toPublic(room),
-      challenge: toClientChallenge(challenge),
+      challenge: toClientChallenge(challenge, room.config.difficulty, match.roundIndex),
       roundIndex: match.roundIndex,
       totalRounds: room.config.rounds,
       startedAt: match.roundStartedAt,
@@ -177,7 +177,7 @@ export class MatchController {
     const publicRoom = this.rooms.toPublic(room)
     this.io.to(room.code).emit('match_round_start', {
       room: publicRoom,
-      challenge: toClientChallenge(challenge),
+      challenge: toClientChallenge(challenge, room.config.difficulty, match.roundIndex),
       roundIndex: match.roundIndex,
       totalRounds: room.config.rounds,
       startedAt,

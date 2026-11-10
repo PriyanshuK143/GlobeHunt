@@ -12,11 +12,18 @@ body,
   margin: 0;
 }
 
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
+}
+
 body {
   font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
   background: #030712;
   color: #e8f1ff;
   overflow: hidden;
+  overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -24,6 +31,20 @@ body {
 button,
 input {
   font: inherit;
+}
+
+button,
+[role='button'] {
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+input,
+textarea,
+select {
+  font-size: 16px;
 }
 
 /* ───────── Scrollbars: a thin glowing rail, not the grey system bar ───────── */
@@ -42,8 +63,10 @@ input {
   background: linear-gradient(180deg, rgba(94, 234, 212, 0.45), rgba(61, 139, 253, 0.45));
   box-shadow: 0 0 6px rgba(61, 139, 253, 0.35);
 }
-::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, rgba(94, 234, 212, 0.75), rgba(61, 139, 253, 0.75));
+@media (hover: hover) and (pointer: fine) {
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(94, 234, 212, 0.75), rgba(61, 139, 253, 0.75));
+  }
 }
 ::-webkit-scrollbar-corner {
   background: transparent;

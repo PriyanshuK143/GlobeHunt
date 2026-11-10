@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { CREDIT_ATTRIBUTION, CREDIT_BLOCKS } from './creditLines'
+import { CREDIT_ATTRIBUTION, CREDIT_BLOCKS, CREDIT_INSTAGRAM } from './creditLines'
 import { audio } from '../../audio'
 import { CreditsSky } from './CreditsSky'
 import { mulberry32 } from '../../globe/ambient/motion'
@@ -208,7 +208,12 @@ export function FormationFlypast({ reducedMotion, skipToken, onComplete, onLine 
         <div className="flypast-layout">
           <div className="flypast-title">{renderBlock(0)}</div>
           <div className="flypast-grid">{[1, 2, 3, 4].map(renderBlock)}</div>
-          <p className="flypast-attribution">{CREDIT_ATTRIBUTION}</p>
+          <div className="flypast-meta">
+            <p className="flypast-attribution">{CREDIT_ATTRIBUTION}</p>
+            <a className="flypast-social" href={CREDIT_INSTAGRAM.href} target="_blank" rel="noreferrer">
+              {CREDIT_INSTAGRAM.label} <span aria-hidden="true">·</span> {CREDIT_INSTAGRAM.handle}
+            </a>
+          </div>
         </div>
 
         {geo && !done

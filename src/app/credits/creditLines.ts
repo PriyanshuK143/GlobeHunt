@@ -39,5 +39,12 @@ export const CREDIT_BLOCKS: CreditBlock[] = [
 /** Required data / imagery attribution, shown small under the credits. */
 export const CREDIT_ATTRIBUTION = 'Imagery: NASA · Map data: Natural Earth, GeoNames (CC BY 4.0)'
 
+/** Creator contact, kept separate from the data-source attribution. */
+export const CREDIT_INSTAGRAM = {
+  label: 'Follow Priyanshu on Instagram',
+  handle: '@priyanshu_k.143',
+  href: 'https://www.instagram.com/priyanshu_k.143/',
+} as const
+
 /** Plain-text version of every credit line (for screen readers). */
 export const CREDIT_TEXT: string[] = CREDIT_BLOCKS.flatMap((b) => b.lines.map((l) => l.text))

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:server": "npm --prefix server run dev",
-    "dev:all": "npm run dev:server & npm run dev",
+    "dev:all": "node scripts/dev-all.mjs",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",

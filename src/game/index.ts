@@ -7,7 +7,10 @@ export {
   TIMER_OPTIONS,
   MIN_ROUNDS,
   MAX_ROUNDS,
+  MIN_TIMER_SECONDS,
+  MAX_TIMER_SECONDS,
   clampRounds,
+  clampTimerSeconds,
 } from './config'
 export { challengeLabel, answerLocation, featureLabel } from './navigation/regionCamera'
 export { PLACE_INFO, type PlaceInfo } from './data/facts'
@@ -24,5 +27,5 @@ export type {
   TimerSeconds,
 } from './types'
 export { discoveryInfoFor, discoveryInfoForReveal } from './discovery'
-export { labelFilterFor, labelTargetFor, labelTargetForId, type LabelTarget } from './labels'
+export { labelFilterFor, labelTargetFor, labelTargetForId, labelTargetForMultiplayer, type LabelTarget } from './labels'
 export { loadPool, poolEntryById } from './data/pool'

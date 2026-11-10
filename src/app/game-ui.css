@@ -101,6 +101,7 @@
   transform: translate(-50%, -50%);
   max-height: min(90dvh, 720px);
   overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .overlay-panel--toast {
@@ -211,8 +212,14 @@
   background: transparent;
 }
 
-.gh-btn:hover {
-  transform: translateY(-1px);
+.gh-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .gh-btn:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .overlay-actions {
@@ -704,6 +711,7 @@ input.field,
 
   .gh-btn {
     width: 100%;
+    min-height: 44px;
   }
 
   .game-hud__top {
@@ -720,6 +728,15 @@ input.field,
     font-size: 1.5rem;
     letter-spacing: 0.18em;
   }
+
+  .overlay-panel--card {
+    width: min(calc(100% - 1.25rem), 30rem);
+    max-height: calc(100dvh - 1.25rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(1.45rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .lobby-code-row { align-items: flex-start; gap: 0.7rem; }
+  .lobby-copy { min-height: 44px; white-space: normal; }
 }
 
 /* Invite link (local-network play) */
@@ -1171,15 +1188,31 @@ input.field,
   45% { opacity: 0.35; filter: blur(4px); }
   100% { opacity: 1; filter: blur(0); -webkit-mask-position: 0 0; mask-position: 0 0; }
 }
+.flypast-meta {
+  display: grid;
+  justify-items: center;
+  gap: 0.38rem;
+  opacity: 0;
+  transition: opacity 1.2s ease 1.2s;
+}
 .flypast-attribution {
   margin: 0;
   font-size: 0.72rem;
   letter-spacing: 0.06em;
   color: rgba(186, 208, 240, 0.55);
-  opacity: 0;
-  transition: opacity 1.2s ease 1.2s;
 }
-.flypast-world.is-overview .flypast-attribution { opacity: 1; }
+.flypast-social {
+  color: rgba(162, 226, 255, 0.88);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-underline-offset: 0.28em;
+}
+@media (hover: hover) and (pointer: fine) {
+  .flypast-social:hover { color: #eaf8ff; }
+}
+.flypast-social:focus-visible { outline: 2px solid #a8eaff; outline-offset: 4px; border-radius: 2px; }
+.flypast-world.is-overview .flypast-meta { opacity: 1; }
 
 /* Formation crossing the current slot. */
 .flypast-formation {

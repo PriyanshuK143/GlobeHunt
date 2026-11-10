@@ -126,3 +126,18 @@ export function labelTargetForId(id: string | null | undefined, roundIndex: numb
   if (entry) return labelTargetFor(entry, roundIndex)
   return fallbackName ? { kind: 'city', name: fallbackName, seed: `${id}#${roundIndex}` } : null
 }
+
+/**
+ * Multiplayer searches receive no target coordinates or public-pool identifier.
+ * Exact target-name suppression keeps labels useful without creating a location-based
+ * gap in the atlas.
+ */
+export function labelTargetForMultiplayer(
+  name: string | undefined,
+  kind: LabelTarget['kind'] | undefined,
+  featureKind: string | undefined,
+  roundKey: string | undefined,
+): LabelTarget | null {
+  if (!name || !kind || !roundKey) return null
+  return { kind, name: kind === 'city' ? name.split(',')[0] : name, featureKind, seed: roundKey }
+}

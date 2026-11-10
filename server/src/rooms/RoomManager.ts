@@ -5,6 +5,8 @@ import {
   type GameConfig,
   MIN_ROUNDS,
   MAX_ROUNDS,
+  MIN_TIMER_SECONDS,
+  MAX_TIMER_SECONDS,
   type PublicPlayer,
   type PublicRoom,
   type RoomPhase,
@@ -75,7 +77,7 @@ function isValidConfig(patch: Partial<GameConfig>): boolean {
   }
   if (patch.showLabels !== undefined && typeof patch.showLabels !== 'boolean') return false
   if (patch.timerSeconds !== undefined) {
-    if (![15, 30, 45, 60].includes(patch.timerSeconds)) return false
+    if (!Number.isInteger(patch.timerSeconds) || patch.timerSeconds < MIN_TIMER_SECONDS || patch.timerSeconds > MAX_TIMER_SECONDS) return false
   }
   return true
 }
