@@ -196,7 +196,19 @@
     line-height: 1.45;
     color: rgba(206, 222, 246, 0.8);
   }
-  .flypast-social { font-size: 0.84rem; }
+  .flypast-social { max-width: 20rem; font-size: 0.82rem; text-align: center; text-wrap: balance; }
+  /* Flypast at phone scale: desktop-sized jets (46px), puffs (30–80px) and 30px lane
+     spacing merged into one opaque cloud bank over the whole screen, and the text
+     reveal (blur-to-sharp wipe) played underneath it, so credits seemed to just pop
+     in. Smaller formation, thinner smoke, and the second credit of each stacked pair
+     revealed a beat later so the writing reads as a sequence. */
+  .flypast-jet { scale: 0.68; }
+  .flypast-lane { top: calc(var(--lane) * 15px); }
+  .flypast-puff { scale: 0.5; }
+  .flypast-formation { opacity: 0.78; }
+  .flypast-grid .flypast-slot.is-writing:nth-child(even) .flypast-line {
+    animation-delay: calc(var(--text-at) + 0.8s + var(--i) * 0.3s);
+  }
 }
 
 /* Backstory film: the desktop treatment adds blur(0.55px) to the whole SVG, captions
@@ -341,18 +353,17 @@
   }
 }
 
-/* ───────── Phone design rules: one card system ─────────
-   Cards doing the same job had drifted apart on phones (pause: 20px gutter, 20px
-   radius, 26px padding, 30px title; info cards: 16px gutter; three kicker styles).
-   One set of values for every card, kicker, title and action button:
-     gutter 12px · radius 16px · padding 19/18px · kicker 0.66rem / 0.24em
-     title 1.3rem (display title 1.5rem) · action buttons 46px · chips 40px */
+/* ───────── Phone design rules: one light card system ─────────
+   Real-device feedback: desktop-sized controls on a phone read as "big cards, big bold
+   fonts". One lighter scale for every card, title, control and button on phones:
+     gutter 12px · radius 16px · padding 16px · kicker 0.62rem / 0.22em
+     title 1.08rem (600) · body 0.86rem · buttons 42px · option pills 36px */
 @media (max-width: 640px) {
   .game-shell {
     --m-gutter: 0.75rem;
     --m-radius: 16px;
-    --m-pad-x: 1.15rem;
-    --m-pad-top: 1.2rem;
+    --m-pad-x: 1rem;
+    --m-pad-top: 1.05rem;
   }
 
   /* Cards */
@@ -363,39 +374,120 @@
   .overlay-panel--card,
   .discovery-card,
   .satellite-card { width: calc(100% - 2 * var(--m-gutter)); }
+  .overlay-panel--card {
+    --card-px: var(--m-pad-x);
+    --card-pb: 1.05rem;
+    padding: var(--m-pad-top) var(--m-pad-x) calc(1.05rem + env(safe-area-inset-bottom, 0px));
+  }
+  /* Short forms don't need the whole screen width. */
+  .settings-panel,
+  .pause-panel { max-width: 22rem; }
+  .settings-panel { width: min(22rem, calc(100% - 2 * var(--m-gutter))); }
   .pause-overlay { padding: var(--m-gutter); }
   .pause-panel,
-  .pause-panel--settings { width: 100%; padding: var(--m-pad-top) var(--m-pad-x) 1.15rem; }
-  .discovery-card { padding: 1.05rem var(--m-pad-x) 1.1rem; }
-  .satellite-card {
-    left: var(--m-gutter);
-    right: var(--m-gutter);
-    bottom: calc(var(--m-gutter) + env(safe-area-inset-bottom, 0px));
-    padding: 1rem var(--m-pad-x) 1.05rem;
-  }
+  .pause-panel--settings { width: 100%; padding: var(--m-pad-top) var(--m-pad-x) 1rem; }
+  .discovery-card { padding: 0.95rem var(--m-pad-x) 1rem; }
 
-  /* Kickers (small uppercase line above a title) */
+  /* Type scale */
   .setup-panel__mode,
   .pause-panel__kicker,
   .discovery-card__banner,
-  .satellite-card__type {
-    font-size: 0.66rem;
-    letter-spacing: 0.24em;
+  .satellite-card__type,
+  .option-group legend {
+    font-size: 0.62rem;
+    letter-spacing: 0.22em;
+  }
+  .overlay-panel__heading,
+  .discovery-card__name { font-size: 1.08rem; font-weight: 600; letter-spacing: 0.06em; line-height: 1.25; }
+  .pause-panel__title { margin: 0.25rem 0 0.8rem; font-size: 1.2rem; font-weight: 600; letter-spacing: 0.18em; text-indent: 0.18em; }
+  .pause-panel__title--sm,
+  .satellite-card__name { font-size: 1rem; font-weight: 600; letter-spacing: 0.06em; text-indent: 0; }
+  .overlay-panel__sub,
+  .pause-panel__note { margin-bottom: 0.9rem; font-size: 0.84rem; line-height: 1.4; }
+  .overlay-panel__heading + .option-group { margin-top: 0.85rem; }
+
+  /* Controls */
+  .gh-btn { min-height: 42px; padding: 0.55rem 1rem; font-size: 0.9rem; }
+  .option-pill,
+  .segmented__btn { min-height: 36px; font-size: 0.84rem; }
+  .option-pill { padding: 0.3rem 0.65rem; }
+  .pause-nav { gap: 0.5rem; }
+  .marker-confirm__btn { min-height: 38px; }
+  .overlay-actions { margin-top: 0.9rem; gap: 0.5rem; }
+
+  /* Settings: compact audio rows; choice pills keep their natural width instead of
+     stretching edge to edge; a modest centred Back instead of a full-width bar. */
+  .audio-fields { gap: 0.75rem; }
+  .audio-field { gap: 0.3rem; }
+  .audio-field__row { font-size: 0.86rem; }
+  .audio-field__pct { font-size: 0.72rem; }
+  .audio-mute { padding: 0.5rem 0.8rem; border-radius: 10px; font-size: 0.86rem; }
+  .settings-panel .option-group { margin-bottom: 0.8rem; }
+  .settings-panel .option-pill { flex: 0 0 auto; min-width: 4.6rem; }
+  .settings-panel .overlay-actions { align-items: center; }
+  .settings-panel .overlay-actions .gh-btn { width: auto; min-width: 9rem; }
+
+  /* Satellite / planet info: it covered the Fly button at the bottom of the home
+     screen. It now opens near the top, compact (short image banner, tighter facts),
+     and never grows into the area the home dock needs. */
+  .satellite-card {
+    top: calc(4.9rem + env(safe-area-inset-top, 0px));
+    bottom: auto;
+    left: var(--m-gutter);
+    right: var(--m-gutter);
+    max-height: calc(100dvh - 4.9rem - 16.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0.8rem 0.9rem 0.85rem;
+  }
+  .satellite-card__art { margin: 0 0 0.6rem; border-radius: 10px; }
+  .satellite-card__art img,
+  .satellite-card__art--photo img,
+  .satellite-card__art--body img { height: 76px; aspect-ratio: auto; }
+  .satellite-card__art--body img { object-fit: contain; }
+  .satellite-card__name { margin: 0.2rem 0 0.45rem; }
+  .satellite-card__facts { gap: 0.15rem; margin-bottom: 0.45rem; font-size: 0.8rem; }
+  .satellite-card__facts dt { min-width: 5rem; }
+  .satellite-card__fact { margin-bottom: 0.3rem; font-size: 0.82rem; line-height: 1.4; }
+  .satellite-card__note { margin-bottom: 0.55rem; font-size: 0.66rem; }
+  .satellite-card__note { margin-bottom: 0; }
+  /* Close as a small pill on the image's corner, always in view (at the bottom it fell
+     below the fold of the card). */
+  .satellite-card .gh-btn {
+    position: absolute;
+    top: 1.15rem;
+    right: 1.25rem;
+    z-index: 1;
+    width: auto;
+    min-height: 30px;
+    padding: 0.25rem 0.75rem;
+    border-color: rgba(140, 186, 255, 0.35);
+    background: rgba(4, 10, 22, 0.78);
+    font-size: 0.76rem;
   }
 
-  /* Titles */
-  .overlay-panel__heading,
-  .discovery-card__name { font-size: 1.3rem; line-height: 1.2; }
-  .pause-panel__title { margin-bottom: 0.9rem; font-size: 1.5rem; letter-spacing: 0.2em; text-indent: 0.2em; }
-  .pause-panel__title--sm,
-  .satellite-card__name { font-size: 1.15rem; letter-spacing: 0.08em; text-indent: 0; }
-  .overlay-panel__sub,
-  .pause-panel__note { font-size: 0.9rem; line-height: 1.4; }
+  /* How to Play: the step card and three stacked full-width buttons filled the
+     screen. Smaller demo stage and type; Play Now primary, the other two side by side. */
+  .howto-screen--steps { padding: calc(1rem + env(safe-area-inset-top, 0px)) var(--m-gutter) calc(1rem + env(safe-area-inset-bottom, 0px)); }
+  .howto-steps__kicker { margin-bottom: 0.75rem; font-size: 0.66rem; letter-spacing: 0.26em; }
+  .howto-steps__stage { gap: 0.75rem; padding: 0.9rem; border-radius: var(--m-radius); }
+  .demo { height: 150px; }
+  .demo-btn { width: 160px; padding: 0.45rem 0; font-size: 0.85rem; }
+  .howto-steps__num { font-size: 0.7rem; }
+  .howto-steps__text h2 { margin: 0.2rem 0 0.3rem; font-size: 1.02rem; font-weight: 600; }
+  .howto-steps__text p { margin: 0; font-size: 0.84rem; line-height: 1.45; }
+  .howto-steps__nav { gap: 0.6rem; margin: 0.8rem 0; }
+  .howto-steps__arrow { min-height: 36px; padding: 0.2rem 0.85rem; font-size: 1rem; }
+  .howto-steps__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  .howto-steps__actions .gh-btn { width: 100%; min-height: 40px; font-size: 0.86rem; }
+  .howto-steps__actions .gh-btn--primary { grid-column: 1 / -1; grid-row: 1; min-height: 44px; }
 
-  /* Action buttons: one height everywhere (chips/pills stay at 40px). */
-  .gh-btn { min-height: 46px; }
-  .pause-nav { gap: 0.55rem; }
-  .marker-confirm__btn { min-height: 40px; }
+  /* Results */
+  .results-score { font-size: 2rem; }
 }
 
 /* ───────── Phones, landscape (short viewports) ─────────

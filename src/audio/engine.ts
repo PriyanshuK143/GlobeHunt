@@ -121,7 +121,11 @@ class AudioEngine {
   private build() {
     const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
     if (!Ctor) return
-    const ctx = new Ctor({ latencyHint: 'interactive' })
+    // Phones: the smallest ("interactive") buffers underrun while the WebGL globe keeps
+    // the device busy, which is heard as crackling. Larger buffers cost ~100 ms of
+    // latency, which ambient music and UI sounds don't notice. Desktop is unchanged.
+    const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
+    const ctx = new Ctor({ latencyHint: touch ? 'playback' : 'interactive' })
     this.ctx = ctx
     ctx.addEventListener('statechange', () => this.notify())
     const comp = ctx.createDynamicsCompressor()
@@ -134,7 +138,8 @@ class AudioEngine {
     this.master.connect(comp)
     this.reverb = ctx.createConvolver()
     // Longer, deeper space for immersion.
-    this.reverb.buffer = makeImpulse(ctx, 5.2, 2.4)
+    // (A 5.2 s stereo convolution is heavy for a phone CPU; half the tail on touch devices.)
+    this.reverb.buffer = makeImpulse(ctx, touch ? 2.6 : 5.2, 2.4)
     const reverbReturn = ctx.createGain()
     reverbReturn.gain.value = 0.55
     this.reverb.connect(reverbReturn)

@@ -1,6 +1,6 @@
 import { Suspense, forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { DEFAULT_AMBIENT } from './ambient'
-import { DPR_FOR_TIER, lowerStoredTier, lowerTier, tierForRenderer, type GraphicsTier } from './performanceTier'
+import { DPR_FOR_TIER, lowerStoredTier, lowerTier, smallScreenDpr, tierForRenderer, type GraphicsTier } from './performanceTier'
 import { Canvas, useThree } from '@react-three/fiber'
 import type { PerspectiveCamera } from 'three'
 import { BASE_CAMERA_FOV, cameraFovForAspect } from './navigation/geo'
@@ -201,7 +201,7 @@ export const GlobeCanvas = forwardRef<GlobeNavigationApi | null, GlobeCanvasProp
       <div ref={containerRef} className="globe-canvas-root" aria-label="Interactive Earth globe">
         <GlobeErrorBoundary key={contextKey}>
           <Canvas
-            dpr={[1, Math.max(1, Math.min(dprCap, DPR_FOR_TIER[tier]) * dprScale)]}
+            dpr={[1, Math.max(1, Math.max(Math.min(dprCap, DPR_FOR_TIER[tier]), smallScreenDpr(tier)) * dprScale)]}
             frameloop={paused ? 'never' : 'always'}
             gl={{
               antialias,

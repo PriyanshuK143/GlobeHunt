@@ -71,5 +71,21 @@ export function lowerStoredTier(from: GraphicsTier): GraphicsTier {
 
 /** Pixel-ratio ceiling per tier (also bounded by the caller's own cap). */
 export const DPR_FOR_TIER: Record<GraphicsTier, number> = { low: 1, medium: 1.5, high: 2 }
+
+/** Rendered-pixel budget per tier (about a 1366×768 desktop at the tier's usual DPR). */
+const PIXEL_BUDGET_FOR_TIER: Record<GraphicsTier, number> = { low: 0.6e6, medium: 1.2e6, high: 2e6 }
+
+/**
+ * Phones are capped at DPR 1–1.5 by tier, but their screens are 2–3× dense, so the globe
+ * and its labels were drawn at half resolution and stretched (blurry coastlines/text).
+ * A phone's CSS viewport is small, so its real density costs no more pixels than a
+ * desktop: allow up to the tier's pixel budget (max 2×). On desktop-sized windows this
+ * is always below the tier ceiling, so desktops are unaffected.
+ */
+export function smallScreenDpr(tier: GraphicsTier): number {
+  if (typeof window === 'undefined') return 1
+  const cssPixels = Math.max(1, window.innerWidth * window.innerHeight)
+  return Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(PIXEL_BUDGET_FOR_TIER[tier] / cssPixels))
+}
 /** Streamed imagery tiles kept on the GPU (each ~1.4 MB with mipmaps). */
 export const TILE_CACHE_FOR_TIER: Record<GraphicsTier, number> = { low: 40, medium: 80, high: 140 }

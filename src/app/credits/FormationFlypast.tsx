@@ -18,8 +18,16 @@ const PASS = 4
 const CAMERA = 1.3
 /** Delay between the jets passing a credit and its text fading in (smoke dissolving). */
 const SETTLE = 2.6
-/** Extra hold after the last text of a row has appeared. */
-const HOLD = 2.6
+/** Extra hold after the last text of a row has finished appearing. */
+const HOLD = 1.4
+/**
+ * How long a credit takes to write itself in, from its text time: the CSS
+ * `credit-reveal` animation (3.4s, keep in sync with game-ui.css), +0.3s for a block's
+ * second line, +0.8s for the second credit of a stacked pair on phones (mobile.css).
+ * The overview used to start only HOLD after the last text time — before this — so
+ * the final reveals were cut off mid-animation and popped in all at once.
+ */
+const REVEAL = 3.4 + 0.3 + 0.8
 /** Zoom while following the formation (1 = full overview). */
 const ZOOM = 1.08
 /** Jets fly between -8% and 108% of the sky's width. */
@@ -131,7 +139,7 @@ export function FormationFlypast({ reducedMotion, skipToken, onComplete, onLine 
     }
     onLine(0)
     const lastText = Math.max(...CREDIT_BLOCKS.map((_, i) => textAt(i)))
-    const id = window.setTimeout(() => setDone(true), (lastText + HOLD) * 1000)
+    const id = window.setTimeout(() => setDone(true), (lastText + REVEAL + HOLD) * 1000)
     return () => window.clearTimeout(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [done, geo === null])
