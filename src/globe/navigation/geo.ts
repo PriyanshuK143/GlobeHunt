@@ -55,6 +55,24 @@ export const MENU_CAMERA_ALTITUDE = 2.55
 export const MIN_CAMERA_DISTANCE = 1.08
 export const MAX_CAMERA_DISTANCE = 4.5
 
+/** Vertical field of view on desktop, landscape and tablets. */
+export const BASE_CAMERA_FOV = 42
+/** Narrowest horizontal field of view allowed on portrait phones. */
+const MIN_HORIZONTAL_FOV = 34
+
+/**
+ * Vertical FOV for a viewport aspect (width / height). A fixed 42° vertical FOV turns
+ * into a ~20° telephoto horizontally on a portrait phone, so the globe overflows both
+ * screen edges. Tall screens widen the vertical FOV just enough to keep ~34° across;
+ * landscape and desktop keep exactly 42° (portrait tablets ≈ 42–44°).
+ */
+export function cameraFovForAspect(aspect: number): number {
+  if (!(aspect > 0)) return BASE_CAMERA_FOV
+  const halfH = THREE.MathUtils.degToRad(MIN_HORIZONTAL_FOV / 2)
+  const vertical = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(halfH) / aspect))
+  return THREE.MathUtils.clamp(vertical, BASE_CAMERA_FOV, 70)
+}
+
 const EARTH_RADIUS_KM = 6371
 
 /** Great-circle distance in kilometers. */

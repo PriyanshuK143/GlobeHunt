@@ -45,12 +45,12 @@ export function MpGameHUD({
       <div className="game-hud__challenge">
         <span className="game-hud__difficulty">{room.config.difficulty}</span>
         <h2 className="game-hud__target">{travelling ? 'Travelling…' : challenge?.name ?? '…'}</h2>
-        <p className="game-hud__prompt">
+        <p className={`game-hud__prompt ${travelling || finished ? '' : 'is-instruction'}`}>
           {travelling
             ? 'Heading to the next region'
             : finished
               ? 'Found! Waiting for other players…'
-              : 'Drop the target, drag to adjust, then confirm'}
+              : 'Drop your marker, drag to adjust, then confirm'}
         </p>
       </div>
     </div>
@@ -147,7 +147,7 @@ export function MpMatchResults({ rankings, isHost, onLobby, onAgain, onMenu }: M
           </>
         ) : (
           <button type="button" className="gh-btn gh-btn--ghost" onClick={onLobby}>
-            Wait for host
+            Wait for Host
           </button>
         )}
       </div>

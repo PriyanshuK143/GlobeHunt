@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { latLngToVector3, vector3ToLatLng, type CameraTarget } from '../../globe'
+import { cameraFovForAspect, latLngToVector3, vector3ToLatLng, type CameraTarget } from '../../globe'
 import type { LocationPool } from '../../../shared/geoPool'
 import type { Challenge, Difficulty } from '../types'
 
@@ -37,9 +37,10 @@ function regionCentroids(pool: LocationPool): Map<string, THREE.Vector3> {
 }
 
 /** Angular radius of ground visible from distance `d` (narrowest screen axis). */
-function visibleGroundAngle(d: number, fovDeg = 42): number {
+function visibleGroundAngle(d: number): number {
   const aspect = typeof window !== 'undefined' ? window.innerWidth / Math.max(1, window.innerHeight) : 1.6
-  const vHalf = THREE.MathUtils.degToRad(fovDeg / 2)
+  // Same FOV the canvas uses for this aspect (wider on portrait phones).
+  const vHalf = THREE.MathUtils.degToRad(cameraFovForAspect(aspect) / 2)
   const half = aspect < 1 ? Math.atan(Math.tan(vHalf) * aspect) : vHalf
   const s = d * Math.sin(half)
   return s >= 1 ? Math.acos(1 / d) : Math.asin(s) - half

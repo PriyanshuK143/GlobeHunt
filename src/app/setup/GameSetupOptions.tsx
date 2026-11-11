@@ -178,8 +178,8 @@ export function GameSetupOptions({ config, onChange, readOnly = false }: GameSet
           </div>
           <p className="labels-toggle__note">
             {config.showLabels
-              ? 'Use geographical labels to help locate places on Earth.'
-              : 'Explore Earth without geographical labels.'}
+              ? 'Place names on the map help you find your way.'
+              : 'Search the globe without place names.'}
           </p>
         </div>
       </fieldset>
@@ -190,5 +190,5 @@ export function GameSetupOptions({ config, onChange, readOnly = false }: GameSet
 /** Compact one-line summary (lobby, non-host view). */
 export function configSummary(config: GameConfig): string {
   const diff = DIFFICULTY_OPTIONS.find((d) => d.value === config.difficulty)
-  return `${diff?.label ?? config.difficulty} · ${config.rounds} rounds · ${config.timerSeconds}s · labels ${config.showLabels ? 'on' : 'off'}`
+  return `${diff?.label ?? config.difficulty} · ${config.rounds} ${config.rounds === 1 ? 'round' : 'rounds'} · ${config.timerSeconds}s · place names ${config.showLabels ? 'on' : 'off'}`
 }

@@ -65,65 +65,68 @@ export function LobbyPanel({
 
   return (
     <div className="overlay-panel overlay-panel--card lobby-panel">
-      <div className="lobby-code-row">
-        <div>
-          <p className="hud-stat__label">Room code</p>
-          <p className="lobby-code">{room.code}</p>
+      {/* Scrolls on phones; the actions below stay put instead of covering it. */}
+      <div className="lobby-panel__body">
+        <div className="lobby-code-row">
+          <div>
+            <p className="hud-stat__label">Room code</p>
+            <p className="lobby-code">{room.code}</p>
+          </div>
+          <button
+            type="button"
+            className={`gh-btn gh-btn--ghost lobby-copy ${copied === 'ok' ? 'is-copied' : ''}`}
+            onClick={() => void copyInvite()}
+            aria-live="polite"
+          >
+            {copied === 'ok' ? 'Link Copied' : copied === 'fail' ? 'Copy Failed' : 'Copy Invite Link'}
+          </button>
         </div>
-        <button
-          type="button"
-          className={`gh-btn gh-btn--ghost lobby-copy ${copied === 'ok' ? 'is-copied' : ''}`}
-          onClick={() => void copyInvite()}
-          aria-live="polite"
-        >
-          {copied === 'ok' ? 'Link copied' : copied === 'fail' ? 'Copy failed' : 'Copy invite link'}
-        </button>
-      </div>
-      <p className="lobby-invite">
-        <span className="lobby-invite__label">Same Wi-Fi? Share</span>
-        <span className="lobby-invite__url" onClick={(e) => window.getSelection()?.selectAllChildren(e.currentTarget)}>
-          {link}
-        </span>
-      </p>
-
-      <p className="overlay-panel__sub">
-        Players {connected.length}/{room.maxPlayers}
-      </p>
-
-      <ul className="player-list">
-        {room.players
-          .filter((p) => p.connected)
-          .map((p) => (
-            <li
-              key={p.id + (nudge?.ids.includes(p.id) ? `-${nudge.key}` : '')}
-              className={`player-list__item ${nudge?.ids.includes(p.id) ? 'is-nudged' : ''}`}
-            >
-              <span>
-                {p.nickname}
-                {p.isHost ? ' · Host' : ''}
-                {!p.connected ? ' · Offline' : ''}
-              </span>
-              <span className={p.ready ? 'tag-ready' : 'tag-wait'}>
-                {p.ready ? 'Ready' : 'Not ready'}
-              </span>
-            </li>
-          ))}
-      </ul>
-
-      <div className="setup-panel__lobby">
-        <p className="setup-panel__mode">Multiplayer · {isHost ? 'You are the host' : 'Host sets the game'}</p>
-        {isHost ? (
-          <GameSetupOptions config={{ ...DEFAULT_MP_CONFIG, ...room.config }} onChange={onConfig} />
-        ) : (
-          <p className="overlay-panel__sub">{configSummary({ ...DEFAULT_MP_CONFIG, ...room.config })}</p>
-        )}
-      </div>
-
-      {error ? (
-        <p className="form-error" role="alert">
-          {error}
+        <p className="lobby-invite">
+          <span className="lobby-invite__label">Same Wi-Fi? Share this link</span>
+          <span className="lobby-invite__url" onClick={(e) => window.getSelection()?.selectAllChildren(e.currentTarget)}>
+            {link}
+          </span>
         </p>
-      ) : null}
+
+        <p className="overlay-panel__sub">
+          Players {connected.length}/{room.maxPlayers}
+        </p>
+
+        <ul className="player-list">
+          {room.players
+            .filter((p) => p.connected)
+            .map((p) => (
+              <li
+                key={p.id + (nudge?.ids.includes(p.id) ? `-${nudge.key}` : '')}
+                className={`player-list__item ${nudge?.ids.includes(p.id) ? 'is-nudged' : ''}`}
+              >
+                <span>
+                  {p.nickname}
+                  {p.isHost ? ' · Host' : ''}
+                  {!p.connected ? ' · Offline' : ''}
+                </span>
+                <span className={p.ready ? 'tag-ready' : 'tag-wait'}>
+                  {p.ready ? 'Ready' : 'Not ready'}
+                </span>
+              </li>
+            ))}
+        </ul>
+
+        <div className="setup-panel__lobby">
+          <p className="setup-panel__mode">Multiplayer · {isHost ? 'You are the host' : 'The host chooses the settings'}</p>
+          {isHost ? (
+            <GameSetupOptions config={{ ...DEFAULT_MP_CONFIG, ...room.config }} onChange={onConfig} />
+          ) : (
+            <p className="overlay-panel__sub">{configSummary({ ...DEFAULT_MP_CONFIG, ...room.config })}</p>
+          )}
+        </div>
+
+        {error ? (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </div>
 
       <div className="overlay-actions lobby-actions">
         {nudge ? (
@@ -140,7 +143,7 @@ export function LobbyPanel({
           className={`gh-btn ${ready ? 'gh-btn--ghost' : 'gh-btn--primary'}`}
           onClick={() => onReady(!ready)}
         >
-          {ready ? 'Unready' : 'Ready'}
+          {ready ? 'Cancel Ready' : 'Ready'}
         </button>
         {isHost ? (
           <button

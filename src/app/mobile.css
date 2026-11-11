@@ -1,0 +1,624 @@
+/* ───────── Mobile polish ─────────
+   Phone-only refinements layered over game-ui.css / ambient.css. Every rule is gated by
+   a phone-width, short-landscape or touch-capability query, so desktop is untouched.
+   env(safe-area-inset-*) resolves to 0 wherever there is no notch / home indicator. */
+
+/* Touch menu button: the pause menu is otherwise Esc-only. Hidden for mouse users. */
+.hud-menu-btn { display: none; }
+
+@media (hover: none), (pointer: coarse) {
+  .hud-menu-btn {
+    position: absolute;
+    z-index: 6;
+    /* Tablets: clear of the FPS / ping line in the top-right corner. */
+    top: calc(2.6rem + env(safe-area-inset-top, 0px));
+    right: calc(clamp(0.85rem, 2vw, 1.5rem) + env(safe-area-inset-right, 0px));
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border: 1px solid var(--gh-stroke);
+    border-radius: 12px;
+    background: rgba(6, 14, 28, 0.72);
+    backdrop-filter: blur(10px);
+    color: var(--gh-text);
+    cursor: pointer;
+    animation: home-fade-up 0.35s ease both;
+    transition: transform 0.1s ease-out, background 0.1s ease-out;
+  }
+  .hud-menu-btn:active { transform: scale(0.94); background: rgba(30, 70, 130, 0.45); }
+  .hud-menu-btn:focus-visible { outline: 2px solid var(--gh-accent-2); outline-offset: 2px; }
+
+  /* Pause glyph: two bars, drawn in CSS so it inherits the HUD colour. */
+  .hud-menu-btn__icon {
+    width: 12px;
+    height: 14px;
+    border-inline: 4px solid currentColor;
+    border-radius: 1px;
+  }
+
+  /* No Esc / Enter keys on a touch screen. */
+  .pause-panel__hint,
+  .marker-confirm__btn kbd { display: none; }
+
+  /* Option chips and toggles: a comfortable thumb size without turning into big
+     circles (short labels like "1" / "No" get a real pill shape). */
+  .option-pill,
+  .segmented__btn { min-height: 40px; }
+  .option-pill { min-width: 2.75rem; }
+  .custom-rounds input { min-height: 40px; }
+}
+
+/* ───────── Phones, portrait ───────── */
+@media (max-width: 640px) {
+  /* ── HUD: one slim glass bar (Round | Score | Time) + the pause key beside it,
+     then the target card at the same width. Was two rows of separate pills ~190px tall. */
+  .game-hud { gap: 0.5rem; padding-inline: calc(0.75rem + env(safe-area-inset-left, 0px)) calc(0.75rem + env(safe-area-inset-right, 0px)); }
+  .game-hud__top {
+    gap: 0;
+    border: 1px solid var(--gh-stroke);
+    border-radius: 14px;
+    background: rgba(6, 14, 28, 0.74);
+    backdrop-filter: blur(10px);
+  }
+  .game-shell:has(.hud-menu-btn) .game-hud__top { margin-right: calc(44px + 0.5rem); }
+  .hud-stat {
+    padding: 0.32rem 0.25rem 0.36rem;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    backdrop-filter: none;
+  }
+  .hud-stat + .hud-stat { border-left: 1px solid rgba(120, 170, 255, 0.14); }
+  .hud-stat__label { font-size: 0.6rem; letter-spacing: 0.14em; }
+  .hud-stat__value { margin-top: 0.05rem; font-size: 1.02rem; line-height: 1.2; }
+
+  /* Target card: a compact centred card that fits its content, not a full-width slab
+     over the map. The default how-to line is hidden here because the answer bar at
+     the bottom says the same thing; status lines (travelling, waiting) still show. */
+  .game-hud__challenge {
+    align-self: center;
+    min-width: 11rem;
+    max-width: 100%;
+    padding: 0.42rem 1.1rem 0.5rem;
+    border-radius: 14px;
+  }
+  .game-hud__difficulty { margin-bottom: 0.08rem; font-size: 0.6rem; letter-spacing: 0.18em; }
+  .game-hud__target { font-size: 1.15rem; line-height: 1.25; }
+  .game-hud__prompt { margin-top: 0.15rem; font-size: 0.78rem; line-height: 1.3; }
+  .game-hud__prompt.is-instruction { display: none; }
+
+  .hud-menu-btn {
+    top: calc(1.55rem + env(safe-area-inset-top, 0px));
+    right: calc(0.75rem + env(safe-area-inset-right, 0px));
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+  }
+  /* Diagnostics (FPS / ping) sat in the top-right corner directly over the pause key.
+     On phones they move to the centre of the status strip, so the right edge belongs
+     to the control alone; the clock keeps the left. */
+  .space-corners.is-gameplay .space-corner--tr {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+
+  /* Legibility: a soft scrim under the status-bar zone, so the clock / FPS strip and
+     the home-screen telemetry read over bright land. Sits under HUD (z3) and cards. */
+  .game-shell::after {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    z-index: 2;
+    height: calc(5.5rem + env(safe-area-inset-top, 0px));
+    background: linear-gradient(180deg, rgba(2, 5, 14, 0.66), rgba(2, 5, 14, 0));
+    pointer-events: none;
+  }
+
+  /* ── Home: the Fly CTA is a centred pill, not a full-width slab. */
+  .home-screen .home-screen__fly { width: auto; min-width: 13rem; min-height: 48px; padding: 0.75rem 2.2rem; }
+  /* One-line music prompt instead of a three-line blob over the globe. */
+  .audio-start-prompt { gap: 0.5rem; padding: 0.6rem 1rem; font-size: 0.8rem; white-space: nowrap; }
+
+  /* ── Menu: slightly narrower stack; secondary items a step quieter. */
+  .menu-nav { width: min(272px, 80vw); }
+  .menu-nav .gh-btn { min-height: 46px; padding-block: 0.7rem; }
+  .menu-nav__secondary .gh-btn { min-height: 44px; padding-block: 0.6rem; font-size: 0.95rem; }
+
+  /* ── Cards: a little more air under headings that go straight into a fieldset. */
+  .overlay-panel__heading + .option-group { margin-top: 1rem; }
+  .overlay-panel--card {
+    --card-px: 1.15rem;
+    --card-pb: 1.3rem;
+    padding: 1.2rem var(--card-px) calc(var(--card-pb) + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Hub buttons are already primary-first in the markup; column-reverse flipped them
+     so "Back" sat on top. */
+  .overlay-actions--stack { flex-direction: column; }
+
+  /* Telemetry corners sat on top of setup / results / lobby cards (they paint above
+     overlays); a full-screen card owns the phone screen, so they step aside. */
+  .game-shell:has(.overlay-panel--card) .space-corners { display: none; }
+
+  /* Bottom-right corner overlapped the Fly button. Keep only the data credit (it must
+     stay visible) as one centred line under everything; the rotation readout is
+     decorative, like the corners already hidden on phones. */
+  .space-corners:not(.is-gameplay) .space-corner--br {
+    left: 0;
+    right: 0;
+    bottom: calc(0.55rem + env(safe-area-inset-bottom, 0px));
+    justify-content: center;
+    text-align: center;
+  }
+  .space-corners:not(.is-gameplay) .space-corner--br .space-corner__stack { justify-items: center; }
+  .space-corners:not(.is-gameplay) .space-corner--br .space-corner__label,
+  .space-corners:not(.is-gameplay) .space-corner--br .space-corner__meta { display: none; }
+
+  /* Clear the home indicator. */
+  .game-hud { padding-bottom: calc(clamp(0.85rem, 2vh, 1.4rem) + env(safe-area-inset-bottom, 0px)); }
+  .marker-confirm { bottom: calc(1.8rem + env(safe-area-inset-bottom, 0px)); }
+  .ambient-commentary--gameplay { bottom: calc(5.6rem + env(safe-area-inset-bottom, 0px)); }
+  .discovery-card {
+    bottom: calc(clamp(1rem, 4vh, 2.4rem) + env(safe-area-inset-bottom, 0px));
+    width: min(440px, calc(100% - 1.5rem));
+    padding: 1rem 1.1rem 1.05rem;
+    border-radius: 16px;
+  }
+  .discovery-card__footer { margin-top: 0.85rem; }
+  .overlay-panel--toast { bottom: calc(clamp(1rem, 4vh, 2.5rem) + env(safe-area-inset-bottom, 0px)); }
+  .credits-actions { bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); }
+  /* ── Credits: the desktop two-column grid gave each block ~150px, so names broke
+     mid-phrase, and the 2vw type bottomed out at ~10px inside two light glow
+     shadows (read as blur). On phones: one centred column, real reading sizes, a
+     tighter halo, and an attribution that is legible rather than 55% transparent. */
+  .flypast-layout { gap: 2rem; padding: 0 1.25rem 15vh; }
+  .flypast-grid { grid-template-columns: 1fr; gap: 1.45rem; width: 100%; }
+  .flypast-slot { gap: 0.3rem; }
+  .flypast-line {
+    font-size: calc(1rem * var(--size));
+    letter-spacing: 0.1em;
+    text-indent: 0.1em;
+    line-height: 1.25;
+    text-wrap: balance;
+    color: rgba(244, 248, 255, 0.97);
+    text-shadow: 0 0 6px rgba(220, 232, 255, 0.3), 0 1px 10px rgba(3, 7, 18, 0.6);
+  }
+  .flypast-meta { gap: 0.5rem; }
+  .flypast-attribution {
+    max-width: 20rem;
+    text-align: center;
+    text-wrap: balance;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: rgba(206, 222, 246, 0.8);
+  }
+  .flypast-social { font-size: 0.84rem; }
+}
+
+/* Backstory film: the desktop treatment adds blur(0.55px) to the whole SVG, captions
+   and bubble lettering included. On a phone the stage is drawn at ~0.4×, so that blur
+   is what turned the text to mush. Keep the warm, faded grade; drop the blur. The
+   grain overlay still gives the old-film softness. */
+@media (max-width: 640px), (max-height: 500px) and (orientation: landscape) {
+  .story-svg { filter: sepia(0.42) saturate(0.82) contrast(0.95) brightness(1.02); }
+}
+
+/* Setup: Start / Back stay pinned to the bottom of the scrolling card, so a long
+   options list never hides the primary action below the fold. */
+@media (max-width: 640px), (max-height: 500px) and (orientation: landscape) {
+  /* ── Setup (singleplayer + lobby): difficulty as a 2×2 grid (was four full-width
+     cards, ~300px). */
+  .setup-options .option-grid--2 { grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+  .setup-options .option-chip {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: 0.55rem 0.65rem 0.6rem;
+    border-radius: 11px;
+  }
+  .setup-options .option-chip__label { font-size: 0.95rem; }
+  .setup-options .option-chip__blurb { font-size: 0.7rem; line-height: 1.25; }
+  .option-group { margin-bottom: 0.85rem; }
+  .option-row { gap: 0.4rem; }
+  /* Pills share the row evenly instead of leaving a ragged gap at the end. */
+  .option-pill { flex: 1 1 auto; padding: 0.35rem 0.7rem; font-size: 0.88rem; }
+  .segmented__btn { padding-block: 0.3rem; }
+
+  /* ── Results: was ~520px of loose spacing, roomy tiles and two stacked full-width
+     buttons. Tighter score block, compact tiles, missed places as wrapping chips (a
+     10-round game no longer grows a tall bulleted column), actions side by side. */
+  .overlay-panel--card:has(.results-grid) .overlay-panel__sub { margin-bottom: 0.2rem; }
+  .results-score { margin-top: 0.1rem; font-size: 2.3rem; line-height: 1.1; }
+  .results-score-label { margin-bottom: 0.85rem; font-size: 0.68rem; }
+  .results-grid { gap: 0.5rem; }
+  .results-grid div { padding: 0.5rem 0.65rem 0.55rem; border-radius: 11px; }
+  .results-grid dt { font-size: 0.62rem; }
+  .results-grid dd { margin-top: 0.15rem; font-size: 1.02rem; }
+  .missed-list { margin-top: 0.85rem; }
+  .missed-list h3 { margin-bottom: 0.4rem; font-size: 0.68rem; }
+  .missed-list ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    padding: 0;
+    list-style: none;
+  }
+  .missed-list li {
+    padding: 0.2rem 0.6rem;
+    border: 1px solid rgba(255, 180, 168, 0.28);
+    border-radius: 999px;
+    background: rgba(120, 40, 30, 0.18);
+    font-size: 0.82rem;
+    color: #ffd6cf;
+  }
+  .overlay-panel--card:has(.results-grid) .overlay-actions {
+    flex-direction: row;
+    gap: 0.6rem;
+    margin-top: 1rem;
+  }
+  .overlay-panel--card:has(.results-grid) .overlay-actions .gh-btn { flex: 1; width: auto; }
+
+  /* ── Lobby: the copy button was a full-size CTA dominating the header. */
+  .lobby-code-row { align-items: center; }
+  .lobby-panel .lobby-copy {
+    width: auto;
+    min-height: 40px;
+    padding: 0.45rem 0.95rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+  .lobby-invite__url { font-size: 0.74rem; }
+
+  /* Setup card: header / scrolling options / footer. The pinned bar used to lie over
+     the options (covering the place-names toggle); now only the options region
+     scrolls, inside clear bounds, and the actions sit below it in normal flow. */
+  .setup-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .setup-panel > :not(.setup-options) { flex: none; }
+  .setup-panel > .setup-options {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    margin-inline: calc(-1 * var(--card-px, 1.4rem));
+    padding: 0.35rem var(--card-px, 1.4rem) 0.5rem;
+    /* Soft edges show there is more to scroll, without a hard cut. */
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 0.6rem, #000 calc(100% - 0.9rem), transparent 100%);
+    mask-image: linear-gradient(180deg, transparent 0, #000 0.6rem, #000 calc(100% - 0.9rem), transparent 100%);
+  }
+  .setup-panel > .setup-options > .option-group:last-child { margin-bottom: 0.25rem; }
+  .setup-panel .overlay-actions {
+    flex-direction: row;
+    gap: 0.6rem;
+    margin: 0.35rem calc(-1 * var(--card-px, 1.4rem)) 0;
+    padding: 0.8rem var(--card-px, 1.4rem) 0;
+    border-top: 1px solid rgba(120, 170, 255, 0.12);
+  }
+
+  /* Lobby: same structure as setup. Everything except the actions sits in
+     .lobby-panel__body, which scrolls inside clear bounds; the actions are an
+     in-flow footer, so they never cover the player list or host settings. */
+  .lobby-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .lobby-panel > .lobby-panel__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    margin-inline: calc(-1 * var(--card-px, 1.4rem));
+    padding: 0.35rem var(--card-px, 1.4rem) 0.5rem;
+    margin-top: -0.35rem;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 0.6rem, #000 calc(100% - 0.9rem), transparent 100%);
+    mask-image: linear-gradient(180deg, transparent 0, #000 0.6rem, #000 calc(100% - 0.9rem), transparent 100%);
+  }
+  .lobby-panel .overlay-actions {
+    flex: none;
+    flex-direction: row;
+    margin: 0.35rem calc(-1 * var(--card-px, 1.4rem)) 0;
+    padding: 0.8rem var(--card-px, 1.4rem) 0;
+    border-top: 1px solid rgba(120, 170, 255, 0.12);
+  }
+  .setup-panel .overlay-actions .gh-btn,
+  .lobby-panel .overlay-actions .gh-btn { width: auto; flex: 1; }
+  .setup-panel .overlay-actions .gh-btn--primary { flex: 1.6; }
+  /* Lobby has three actions (Leave / Ready / Start): size to their labels, one line. */
+  .lobby-panel .overlay-actions { gap: 0.45rem; }
+  .lobby-panel .overlay-actions .gh-btn {
+    flex: 1 1 auto;
+    padding-inline: 0.7rem;
+    font-size: 0.92rem;
+    white-space: nowrap;
+  }
+}
+
+/* ───────── Phone design rules: one card system ─────────
+   Cards doing the same job had drifted apart on phones (pause: 20px gutter, 20px
+   radius, 26px padding, 30px title; info cards: 16px gutter; three kicker styles).
+   One set of values for every card, kicker, title and action button:
+     gutter 12px · radius 16px · padding 19/18px · kicker 0.66rem / 0.24em
+     title 1.3rem (display title 1.5rem) · action buttons 46px · chips 40px */
+@media (max-width: 640px) {
+  .game-shell {
+    --m-gutter: 0.75rem;
+    --m-radius: 16px;
+    --m-pad-x: 1.15rem;
+    --m-pad-top: 1.2rem;
+  }
+
+  /* Cards */
+  .overlay-panel--card,
+  .discovery-card,
+  .pause-panel,
+  .satellite-card { border-radius: var(--m-radius); }
+  .overlay-panel--card,
+  .discovery-card,
+  .satellite-card { width: calc(100% - 2 * var(--m-gutter)); }
+  .pause-overlay { padding: var(--m-gutter); }
+  .pause-panel,
+  .pause-panel--settings { width: 100%; padding: var(--m-pad-top) var(--m-pad-x) 1.15rem; }
+  .discovery-card { padding: 1.05rem var(--m-pad-x) 1.1rem; }
+  .satellite-card {
+    left: var(--m-gutter);
+    right: var(--m-gutter);
+    bottom: calc(var(--m-gutter) + env(safe-area-inset-bottom, 0px));
+    padding: 1rem var(--m-pad-x) 1.05rem;
+  }
+
+  /* Kickers (small uppercase line above a title) */
+  .setup-panel__mode,
+  .pause-panel__kicker,
+  .discovery-card__banner,
+  .satellite-card__type {
+    font-size: 0.66rem;
+    letter-spacing: 0.24em;
+  }
+
+  /* Titles */
+  .overlay-panel__heading,
+  .discovery-card__name { font-size: 1.3rem; line-height: 1.2; }
+  .pause-panel__title { margin-bottom: 0.9rem; font-size: 1.5rem; letter-spacing: 0.2em; text-indent: 0.2em; }
+  .pause-panel__title--sm,
+  .satellite-card__name { font-size: 1.15rem; letter-spacing: 0.08em; text-indent: 0; }
+  .overlay-panel__sub,
+  .pause-panel__note { font-size: 0.9rem; line-height: 1.4; }
+
+  /* Action buttons: one height everywhere (chips/pills stay at 40px). */
+  .gh-btn { min-height: 46px; }
+  .pause-nav { gap: 0.55rem; }
+  .marker-confirm__btn { min-height: 40px; }
+}
+
+/* ───────── Phones, landscape (short viewports) ─────────
+   The portrait stack (stats over target card) covered half the globe. Here the stats
+   and the target sit side by side in one slim row, and result cards dock to the side. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .game-hud {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: calc(0.6rem + env(safe-area-inset-top, 0px)) max(10rem, calc(1rem + env(safe-area-inset-right, 0px)))
+      calc(0.6rem + env(safe-area-inset-bottom, 0px));
+  }
+  /* Same single glass bar as portrait phones. */
+  .game-hud__top {
+    flex: none;
+    gap: 0;
+    padding-right: 0;
+    border: 1px solid var(--gh-stroke);
+    border-radius: 14px;
+    background: rgba(6, 14, 28, 0.74);
+    backdrop-filter: blur(10px);
+  }
+  .game-shell:has(.hud-menu-btn) .game-hud__top { padding-right: 0; margin-right: 0; }
+  .hud-stat {
+    flex: none;
+    min-width: 4.1rem;
+    padding: 0.32rem 0.55rem 0.36rem;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    backdrop-filter: none;
+  }
+  .hud-stat + .hud-stat { border-left: 1px solid rgba(120, 170, 255, 0.14); }
+  .game-hud__challenge { border-radius: 14px; }
+  .hud-stat__label { font-size: 0.6rem; }
+  .hud-stat__value { font-size: 1rem; margin-top: 0.05rem; }
+  .game-hud__challenge {
+    align-self: flex-start;
+    flex: 0 1 20rem;
+    min-width: 0;
+    max-width: none;
+    padding: 0.4rem 0.85rem 0.45rem;
+  }
+  .game-hud__difficulty { margin-bottom: 0.1rem; font-size: 0.62rem; }
+  .game-hud__target { font-size: 1.05rem; }
+  .game-hud__prompt { margin-top: 0.15rem; font-size: 0.78rem; }
+  .game-hud__progress {
+    position: absolute;
+    left: calc(1rem + env(safe-area-inset-left, 0px));
+    right: calc(1rem + env(safe-area-inset-right, 0px));
+    bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+    margin-top: 0;
+  }
+
+  .hud-menu-btn {
+    top: calc(2.2rem + env(safe-area-inset-top, 0px));
+    right: calc(1rem + env(safe-area-inset-right, 0px));
+    height: 44px;
+    width: 44px;
+  }
+
+  .space-corner--tl,
+  .space-corner--bl { left: calc(clamp(0.9rem, 2.2vw, 1.8rem) + env(safe-area-inset-left, 0px)); }
+  .space-corner--tr,
+  .space-corner--br { right: calc(clamp(0.9rem, 2.2vw, 1.8rem) + env(safe-area-inset-right, 0px)); }
+  .space-corners.is-gameplay .space-corner--tl,
+  .space-corners.is-gameplay .space-corner--tr { top: calc(0.9rem + env(safe-area-inset-top, 0px)); }
+  /* Decorative glyph (already hidden on portrait phones) crowded the Fly button / menu. */
+  .space-corner__constellation { display: none; }
+
+  .marker-confirm { bottom: calc(1.1rem + env(safe-area-inset-bottom, 0px)); }
+  /* Above the answer bar instead of beside it, where the two collided. */
+  .ambient-commentary--gameplay {
+    left: calc(1rem + env(safe-area-inset-left, 0px));
+    bottom: calc(4.6rem + env(safe-area-inset-bottom, 0px));
+    max-width: min(300px, 38vw);
+    text-align: left;
+    transform: translateY(6px);
+  }
+  .ambient-commentary--gameplay.is-visible { transform: none; }
+
+  /* Round result docks right so the revealed place in the middle stays visible. */
+  .discovery-card {
+    left: auto;
+    right: calc(1rem + env(safe-area-inset-right, 0px));
+    bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    width: min(330px, 40vw);
+    max-height: calc(100dvh - 3.25rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    padding: 0.9rem 1.05rem 0.95rem;
+    transform: none;
+    animation-name: discovery-in-side;
+  }
+  .discovery-card__fact { margin-top: 0.6rem; }
+  .discovery-card__stats { margin-top: 0.6rem; }
+  .discovery-card__footer { margin-top: 0.75rem; }
+
+  /* Setup / lobby: use the width. Wider card, compact header, difficulty in one row
+     of four, and Rounds beside Round timer, so the options fit without scrolling. */
+  .setup-panel,
+  .lobby-panel {
+    --card-px: 1.25rem;
+    --card-pb: 1rem;
+    width: min(680px, calc(100% - 2rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
+    padding: 0.9rem var(--card-px) calc(var(--card-pb) + env(safe-area-inset-bottom, 0px));
+  }
+  .setup-panel__mode { margin-bottom: 0.1rem; }
+  .setup-panel .overlay-panel__heading { font-size: 1.15rem; }
+  /* The subtitle restates the heading; the height is better spent on options. */
+  .setup-panel .overlay-panel__sub { display: none; }
+  .setup-panel .overlay-panel__heading { margin-bottom: 0.6rem; }
+  .setup-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 1.1rem;
+  }
+  .setup-options > .option-group:first-child,
+  .setup-options > .labels-toggle { grid-column: 1 / -1; }
+  .setup-options .option-grid--2 { grid-template-columns: repeat(4, 1fr); }
+  .option-group { margin-bottom: 0.65rem; }
+  .option-group legend { margin-bottom: 0.35rem; }
+  /* Place-names toggle on one line: label, switch, note. (A floated legend becomes
+     an ordinary box, so it can sit beside the row.) */
+  .labels-toggle legend { float: left; margin: 0 0.9rem 0 0; line-height: 40px; }
+  .setup-options > .labels-toggle { margin-bottom: 0.1rem; }
+  .setup-panel { padding-top: 0.75rem; }
+  .setup-panel .overlay-panel__heading { margin-bottom: 0.45rem; }
+  .setup-options .option-chip { padding-block: 0.45rem 0.5rem; }
+  /* "Show place names on map" already says it; the wrapped note was clipped. */
+  .labels-toggle__note { display: none; }
+  .setup-panel .overlay-actions,
+  .lobby-panel .overlay-actions { padding-block: 0.6rem calc(0.65rem + env(safe-area-inset-bottom, 0px)); }
+  .setup-panel .overlay-actions,
+  .lobby-panel .overlay-actions { justify-content: flex-end; }
+  .setup-panel .overlay-actions .gh-btn,
+  .lobby-panel .overlay-actions .gh-btn { flex: none; min-width: 7.5rem; min-height: 42px; padding: 0.5rem 1.3rem; }
+  .setup-panel .overlay-actions .gh-btn--primary { min-width: 11rem; }
+
+  /* Results: four stats in one row and a smaller score so the actions are on screen. */
+  .overlay-panel--card:has(.results-grid) {
+    width: min(620px, calc(100% - 2rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
+    padding-block: 0.9rem 1rem;
+  }
+  .overlay-panel--card:has(.results-grid) .overlay-panel__sub { margin-bottom: 0.4rem; }
+  .results-score { margin-top: 0; font-size: 2rem; line-height: 1.1; }
+  .results-score-label { margin-bottom: 0.6rem; }
+  .results-grid { grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
+  .results-grid div { padding: 0.5rem 0.65rem; }
+  .results-grid dd { font-size: 1.05rem; }
+  .missed-list { margin-top: 0.7rem; }
+  .overlay-panel--card:has(.results-grid) .overlay-actions { margin-top: 0.8rem; }
+
+  /* Settings: audio on the left, visual effects + motion on the right, Back below. */
+  .settings-panel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 1.5rem;
+    align-content: start;
+    width: min(640px, calc(100% - 2rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
+    padding-block: 0.9rem 1rem;
+  }
+  .settings-panel > .overlay-panel__heading { grid-column: 1 / -1; margin-bottom: 0.75rem; font-size: 1.15rem; }
+  .settings-panel > .option-group:first-of-type { grid-column: 1; grid-row: 2 / span 2; }
+  .settings-panel > .option-group { margin-bottom: 0.6rem; }
+  .settings-panel > .overlay-actions { grid-column: 1 / -1; margin-top: 0.35rem; }
+  .settings-panel .audio-fields { gap: 0.7rem; }
+
+  /* Lobby header: the room code and invite box took ~250px of a 360px screen. */
+  .lobby-panel .lobby-code-row { margin-bottom: 0.5rem; }
+  .lobby-panel .lobby-code { font-size: 1.4rem; letter-spacing: 0.22em; }
+  .lobby-panel .lobby-invite { margin-bottom: 0.55rem; padding: 0.4rem 0.65rem; }
+  .lobby-panel .overlay-panel__sub { margin: 0.2rem 0 0.5rem; }
+  .lobby-panel .player-list { margin-bottom: 0.7rem; }
+  .lobby-panel .player-list__item { padding-block: 0.45rem; }
+
+  /* As on portrait phones, the corner telemetry collides with full-height cards. */
+  .game-shell:has(.overlay-panel--card) .space-corners { display: none; }
+
+  /* Cards and the pause panel scroll inside the short viewport instead of clipping. */
+  .overlay-panel--card {
+    max-height: calc(100dvh - 1.25rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  }
+  .pause-overlay { overflow-y: auto; overscroll-behavior: contain; padding: 0.75rem; }
+  .pause-panel { padding: 1.1rem 1.25rem 1rem; }
+  .pause-panel__title { margin-bottom: 0.75rem; font-size: 1.5rem; }
+  .pause-nav { gap: 0.5rem; }
+  .pause-panel__hint { display: none; }
+
+  /* Main menu: a landscape arrangement instead of a squeezed portrait stack —
+     primary actions side by side, the three secondary ones in a row beneath. */
+  .menu-panel { padding-block: 0.75rem; }
+  .menu-panel__inner { gap: 1.1rem; }
+  .menu-panel__title { font-size: 1.6rem; }
+  .menu-nav { width: min(520px, 66vw); gap: 0.55rem; }
+  .menu-nav__primary { grid-template-columns: 1fr 1fr; gap: 0.55rem; }
+  .menu-nav__secondary { grid-template-columns: repeat(3, 1fr); gap: 0.55rem; }
+  .menu-nav .gh-btn { min-height: 46px; padding: 0.65rem 0.8rem; }
+  .menu-nav__secondary .gh-btn { min-height: 42px; padding-block: 0.5rem; font-size: 0.92rem; }
+  .menu-nav__back { margin-top: 0.15rem; }
+
+  /* The music prompt sat on the GLOBEHUNT title; the top-centre strip between the two
+     corner readouts is free. One line, compact. */
+  .audio-start-prompt {
+    top: calc(0.9rem + env(safe-area-inset-top, 0px));
+    padding: 0.5rem 0.95rem;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    transform: translateX(-50%);
+    animation-name: audio-prompt-in-top;
+  }
+
+  /* Clear of the data-credit line in the bottom-right corner. */
+  .home-screen { padding-bottom: calc(2.6rem + env(safe-area-inset-bottom, 0px)); }
+  .home-screen__fly { margin-top: 1rem; }
+}
+
+@keyframes audio-prompt-in-top {
+  from { opacity: 0; transform: translate(-50%, -5px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@keyframes discovery-in-side {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}

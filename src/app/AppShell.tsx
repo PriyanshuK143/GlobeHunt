@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   GlobeCanvas,
   HOME_CAMERA_ALTITUDE,
@@ -49,6 +49,7 @@ import { revealApp } from './launchVeil'
 import { takeInviteCode } from '../multiplayer/invite'
 import './game-ui.css'
 import './ambient/ambient.css'
+import './mobile.css'
 
 export type AppMode =
   | 'home'
@@ -297,25 +298,31 @@ export function AppShell() {
   }
   const spLive = mode === 'singleplayer' && sp.phase === 'playing' && sp.pickingEnabled
   const mpLive = mode === 'multiplayer' && (mp.screen === 'playing' || mp.screen === 'round_result')
+  /** Shared by ESC and the touch menu button. Returns true when the menu opened. */
+  const openPause = useCallback((): boolean => {
+    if (pauseOpen) return false
+    // Never interrupt an in-progress marker drag.
+    if (marker.get().dragging) return false
+    if (spLive) {
+      if (!sp.pause()) return false
+      setPauseOpen(true)
+      return true
+    }
+    if (mpLive) {
+      // Multiplayer: local-only menu; the server match keeps running.
+      setPauseOpen(true)
+      return true
+    }
+    return false
+  }, [pauseOpen, spLive, mpLive, marker, sp])
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || pauseOpen || e.repeat) return
-      // Never interrupt an in-progress marker drag.
-      if (marker.get().dragging) return
-      if (spLive) {
-        if (sp.pause()) {
-          e.preventDefault()
-          setPauseOpen(true)
-        }
-      } else if (mpLive) {
-        // Multiplayer: local-only menu; the server match keeps running.
-        e.preventDefault()
-        setPauseOpen(true)
-      }
+      if (e.key !== 'Escape' || e.repeat) return
+      if (openPause()) e.preventDefault()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [pauseOpen, spLive, mpLive, marker, sp])
+  }, [openPause])
   // Close the menu if the match ends underneath it (e.g. multiplayer results).
   useEffect(() => {
     if (pauseOpen && !inMatch) setPauseOpen(false)
@@ -613,6 +620,22 @@ export function AppShell() {
 
       {planet && !inMatch && (mode === 'home' || mode === 'menu') ? (
         <PlanetCard key={planet.id} spec={planet} onClose={() => setPlanet(null)} />
+      ) : null}
+
+      {/* Touch screens have no Esc key: this opens the same pause menu (shown only on
+          touch / no-hover devices via CSS, so desktop is unchanged). */}
+      {(spLive || mpLive) && !pauseOpen ? (
+        <button
+          type="button"
+          className="hud-menu-btn"
+          aria-label={mode === 'multiplayer' ? 'Open match menu' : 'Pause'}
+          aria-haspopup="dialog"
+          onClick={() => {
+            openPause()
+          }}
+        >
+          <span className="hud-menu-btn__icon" aria-hidden />
+        </button>
       ) : null}
 
       {pauseOpen && inMatch ? (

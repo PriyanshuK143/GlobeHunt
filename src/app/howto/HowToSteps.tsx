@@ -20,7 +20,7 @@ function MiniMap({ children }: { children?: ReactNode }) {
 const STEPS: Step[] = [
   {
     title: 'Choose your game',
-    line: 'Singleplayer to explore alone, or Multiplayer to race friends with a room code.',
+    line: 'Play Singleplayer to explore alone, or Multiplayer to race friends using a room code.',
     demo: (
       <div className="demo demo-choose">
         <span className="demo-btn is-primary">Singleplayer</span>
@@ -31,7 +31,7 @@ const STEPS: Step[] = [
   },
   {
     title: 'Set your challenge',
-    line: 'Pick difficulty, rounds (or a custom count), the timer, and whether place names show on the map.',
+    line: 'Choose the difficulty, the number of rounds (or a custom count), the timer and whether place names appear on the map.',
     demo: (
       <div className="demo demo-config">
         <div className="demo-chips">
@@ -57,7 +57,7 @@ const STEPS: Step[] = [
   },
   {
     title: 'Find the place',
-    line: 'Read the target — Earth flies to the right region. Rotate and zoom to search.',
+    line: 'Read the target — the globe flies to its region. Rotate and zoom to search.',
     demo: (
       <div className="demo demo-find">
         <div className="demo-card">
@@ -74,8 +74,8 @@ const STEPS: Step[] = [
     ),
   },
   {
-    title: 'Drop your target',
-    line: 'Tap the globe to drop the red ring, drag it onto the spot, then press Confirm.',
+    title: 'Drop your marker',
+    line: 'Tap the globe to drop the red marker, drag it onto the spot, then press Confirm.',
     demo: (
       <div className="demo demo-place">
         <MiniMap>
@@ -147,7 +147,7 @@ export function HowToSteps({ onPlay, onReplay, onMenu }: HowToStepsProps) {
 
   return (
     <div className="howto-steps">
-      <p className="howto-steps__kicker">How to play GLOBEHUNT</p>
+      <p className="howto-steps__kicker">How to Play GLOBEHUNT</p>
       <div className="howto-steps__stage" key={index}>
         <div className="howto-steps__demo">{step.demo}</div>
         <div className="howto-steps__text">
@@ -182,10 +182,10 @@ export function HowToSteps({ onPlay, onReplay, onMenu }: HowToStepsProps) {
           Main Menu
         </button>
         <button type="button" className="gh-btn gh-btn--ghost" onClick={onReplay}>
-          Replay the memory
+          Replay the Memory
         </button>
         <button type="button" className="gh-btn gh-btn--primary" onClick={onPlay}>
-          Play now
+          Play Now
         </button>
       </div>
     </div>

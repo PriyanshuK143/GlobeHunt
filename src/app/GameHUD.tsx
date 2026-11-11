@@ -57,8 +57,9 @@ export function GameHUD({
         <h2 className="game-hud__target">
           {loading ? `Round ${Math.min(roundIndex + 1, totalRounds)} · Travelling…` : challenge ? challengeLabel(challenge) : '—'}
         </h2>
-        <p className="game-hud__prompt">
-          {loading ? 'Heading to the next region' : 'Drop the target, drag to adjust, then confirm'}
+        {/* is-instruction: the default how-to line, which the answer bar also shows. */}
+        <p className={`game-hud__prompt ${loading ? '' : 'is-instruction'}`}>
+          {loading ? 'Heading to the next region' : 'Drop your marker, drag to adjust, then confirm'}
         </p>
       </div>
 

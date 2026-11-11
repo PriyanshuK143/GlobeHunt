@@ -218,7 +218,14 @@ export function FormationFlypast({ reducedMotion, skipToken, onComplete, onLine 
 
         {geo && !done
           ? ROWS.map((current, ri) => (
-          <div key={`pass-${ri}`} className={`flypast-formation ${current.dir === -1 ? 'is-reverse' : ''}`} style={{ top: geo.cy[current.blocks[0]] }} aria-hidden>
+          <div
+            key={`pass-${ri}`}
+            className={`flypast-formation ${current.dir === -1 ? 'is-reverse' : ''}`}
+            // Middle of the row's blocks: identical on desktop (a row shares one line);
+            // on phones, where a row's pair stacks, the smoke sweeps across both.
+            style={{ top: current.blocks.reduce((sum, b) => sum + geo.cy[b], 0) / current.blocks.length }}
+            aria-hidden
+          >
             {LANES.map((l, i) => (
               <div key={l.lane} className="flypast-lane" style={{ ['--lane' as string]: l.lane }}>
                 {lanePuffs[(i + ri) % lanePuffs.length].map((p, k) => (

@@ -50,7 +50,7 @@ export function AudioSettingsFields({ settings, onChange }: AudioSettingsFieldsP
         aria-pressed={settings.muted}
         onClick={() => onChange({ muted: !settings.muted })}
       >
-        {settings.muted ? 'Sound off — tap to unmute' : 'Mute all sound'}
+        {settings.muted ? 'Sound Off — Tap to Unmute' : 'Mute All Sound'}
       </button>
     </div>
   )

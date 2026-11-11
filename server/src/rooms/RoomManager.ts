@@ -105,7 +105,7 @@ export class RoomManager {
 
   createRoom(socketId: string, nicknameRaw: string): { room: PublicRoom; playerId: string; sessionToken: string } {
     const nickname = sanitizeNickname(nicknameRaw)
-    if (!nickname) throw new Error('Nickname must be 2–16 letters, numbers, or spaces')
+    if (!nickname) throw new Error('Nickname must be 2–16 letters, numbers or spaces')
 
     const code = this.allocateCode()
     const playerId = randomUUID()
@@ -152,10 +152,10 @@ export class RoomManager {
     if (room.phase !== 'lobby') throw new Error('Match already in progress')
 
     const connectedCount = [...room.players.values()].filter((p) => p.connected).length
-    if (connectedCount >= MAX_PLAYERS) throw new Error('Room is full (max 8 players)')
+    if (connectedCount >= MAX_PLAYERS) throw new Error('Room is full (8 players max)')
 
     const nickname = sanitizeNickname(nicknameRaw)
-    if (!nickname) throw new Error('Nickname must be 2–16 letters, numbers, or spaces')
+    if (!nickname) throw new Error('Nickname must be 2–16 letters, numbers or spaces')
 
     const taken = [...room.players.values()].some(
       (p) => p.connected && p.nickname.toLowerCase() === nickname.toLowerCase(),
@@ -252,7 +252,7 @@ export class RoomManager {
     const { room, player } = this.requireLobbyPlayer(socketId)
     if (player.id !== room.hostId) throw new Error('Only the host can change settings')
     if (room.phase !== 'lobby') throw new Error('Settings are locked during a match')
-    if (!isValidConfig(patch)) throw new Error('Invalid configuration')
+    if (!isValidConfig(patch)) throw new Error('Invalid game settings')
     // Whitelist known keys so clients cannot inject arbitrary config fields.
     const clean: Partial<GameConfig> = {}
     if (patch.difficulty !== undefined) clean.difficulty = patch.difficulty

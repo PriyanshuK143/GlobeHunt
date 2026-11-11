@@ -76,7 +76,7 @@ export const PLACE_INFO: Record<string, PlaceInfo> = {
   'city:queenstown': { region: 'New Zealand', fact: 'Queenstown sits on the shore of Lake Wakatipu in the South Island.' },
   'city:antofagasta': { region: 'Chile', fact: 'Antofagasta lies on the edge of the Atacama Desert.' },
   'city:prayagraj': { region: 'India', fact: 'Prayagraj lies at the confluence of the Ganges and Yamuna rivers.' },
-  'city:split': { region: 'Croatia', fact: 'Split’s old town grew inside the Roman Diocletian’s Palace.' },
+  'city:split': { region: 'Croatia', fact: 'Split’s old town grew up inside the palace of the Roman emperor Diocletian.' },
   'city:kumasi': { region: 'Ghana', fact: 'Kumasi is the historic capital of the Ashanti Kingdom.' },
   'city:medellin': { region: 'Colombia', fact: 'Medellín lies in the Aburrá Valley in the Andes.' },
   'city:sapporo': { region: 'Japan', fact: 'Sapporo hosted the 1972 Winter Olympics.' },

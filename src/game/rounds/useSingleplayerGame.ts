@@ -255,7 +255,7 @@ export function useSingleplayerGame(): SingleplayerGameApi {
         challengesRef.current = list
         await beginRound(0, list, globe)
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to start game'
+        const message = err instanceof Error ? err.message : 'Couldn’t start the game — please try again'
         setError(message)
         setPhase('config')
       }

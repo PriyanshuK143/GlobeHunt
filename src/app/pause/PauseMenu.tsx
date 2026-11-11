@@ -58,7 +58,7 @@ export function PauseMenu({ multiplayer, settings, onSettingsChange, onResume, o
                 Settings
               </button>
               <button type="button" className="gh-btn gh-btn--ghost pause-nav__quit" onClick={() => setView('confirm')}>
-                Return to main menu
+                Return to Main Menu
               </button>
             </nav>
             <p className="pause-panel__hint">
@@ -86,7 +86,7 @@ export function PauseMenu({ multiplayer, settings, onSettingsChange, onResume, o
           <>
             <p className="pause-panel__kicker">Leave {multiplayer ? 'match' : 'round'}?</p>
             <h2 id="pause-title" className="pause-panel__title pause-panel__title--sm">
-              Return to main menu
+              Return to Main Menu
             </h2>
             <p className="pause-panel__note">
               {multiplayer

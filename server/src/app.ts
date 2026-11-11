@@ -146,7 +146,7 @@ export function createGameServer(opts: GameServerOptions): GameServer {
         reply(ack, { ok: true, room, playerId, sessionToken })
         socket.emit('room_state', room)
       } catch (err) {
-        reply(ack, { ok: false, error: errorText(err, 'Create failed') })
+        reply(ack, { ok: false, error: errorText(err, 'Couldn’t create the room') })
       }
     })
 
@@ -164,14 +164,14 @@ export function createGameServer(opts: GameServerOptions): GameServer {
         reply(ack, { ok: true, room, playerId, sessionToken })
         io.to(room.code).emit('room_state', room)
       } catch (err) {
-        reply(ack, { ok: false, error: errorText(err, 'Join failed') })
+        reply(ack, { ok: false, error: errorText(err, 'Couldn’t join the room') })
       }
     })
 
     socket.on('room_resume', (payload, ack) => {
       try {
         if (!allowAction(`resume:${ip}`, 20, 60_000)) {
-          reply(ack, { ok: false, error: 'Too many attempts' })
+          reply(ack, { ok: false, error: 'Too many attempts — wait a moment' })
           return
         }
         const token = typeof payload?.sessionToken === 'string' ? payload.sessionToken : ''
@@ -188,7 +188,7 @@ export function createGameServer(opts: GameServerOptions): GameServer {
         const live = internal ? matches.liveRound(internal) : null
         if (live) socket.emit('match_round_start', live)
       } catch (err) {
-        reply(ack, { ok: false, error: errorText(err, 'Resume failed') })
+        reply(ack, { ok: false, error: errorText(err, 'Couldn’t rejoin the room') })
       }
     })
 
@@ -229,7 +229,7 @@ export function createGameServer(opts: GameServerOptions): GameServer {
         const result = matches.submitAnswer(socket.id, lat, lng)
         reply(ack, { ok: true, correct: result.correct })
       } catch (err) {
-        reply(ack, { ok: false, error: errorText(err, 'Submit failed') })
+        reply(ack, { ok: false, error: errorText(err, 'Couldn’t submit your answer') })
       }
     })
 

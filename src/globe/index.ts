@@ -8,6 +8,7 @@ export {
   MENU_CAMERA_ALTITUDE,
   MIN_CAMERA_DISTANCE,
   MAX_CAMERA_DISTANCE,
+  cameraFovForAspect,
   latLngToVector3,
   vector3ToLatLng,
   haversineKm,

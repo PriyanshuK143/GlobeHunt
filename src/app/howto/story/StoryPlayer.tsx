@@ -47,13 +47,16 @@ function SpeechBubble({ frame, t, index, vb }: { frame: Frame; t: number; index:
   const pose = frame.poses[b.speaker]
   const lift = kid.view === 'back' ? -pose.forward : pose.forward
   const head = toScreen(frame, kid.x, kid.y + (-232 + lift) * kid.scale)
-  // Larger lettering on narrow/portrait screens so bubbles stay readable.
-  const fs = vb.w < 1200 ? 42 : 34
+  // Larger lettering on narrow/portrait screens so bubbles stay readable (the whole
+  // stage is drawn at ~0.4× on a phone, so 50 units is still only ~19px there).
+  const fs = vb.w < 1200 ? 50 : 34
   const w = Math.max(170, b.text.length * fs * 0.46 + 56)
   const h = fs * 2.15
   const side = kid.x < 800 ? -1 : 1
   let cx = head.x + side * (w * 0.32)
-  let cy = head.y - 92
+  // Portrait bubbles are wider than the gaps between heads, so lift them clear of the
+  // back row onto the wall (the tail stretches down to the speaker).
+  let cy = head.y - (vb.w < 1200 ? 330 : 92)
   cx = Math.max(vb.x + w / 2 + 24, Math.min(vb.x + vb.w - w / 2 - 24, cx))
   cy = Math.max(vb.y + h / 2 + 24, cy)
   const tailX = Math.max(cx - w / 2 + 30, Math.min(cx + w / 2 - 30, head.x))
@@ -101,7 +104,7 @@ function Countdown({ frame, vb }: { frame: Frame; vb: ViewBox }) {
       <text x={x} y={y + 22} textAnchor="middle" fontFamily="'Patrick Hand', cursive" fontSize={c.value === null ? 70 : 62} fill={c.value === null ? '#a4441a' : INK}>
         {c.value === null ? '✓' : c.value}
       </text>
-      <text x={x} y={y + 86} textAnchor="middle" fontFamily="'Patrick Hand', cursive" fontSize={26} fill={INK}>
+      <text x={x} y={y + 86} textAnchor="middle" fontFamily="'Patrick Hand', cursive" fontSize={vb.w < 1200 ? 34 : 26} fill={INK}>
         {c.value === null ? 'found!' : 'seconds'}
       </text>
     </g>
@@ -177,6 +180,20 @@ export function StoryPlayer({ onFinished, reducedMotion }: StoryPlayerProps) {
   }, [t, frame])
 
   const { camera, photo } = frame
+  // Portrait phones: the stage gains empty paper above and below the 16:9 set. The two
+  // memory captions use that space (instead of sitting on the wall or the floor art),
+  // keep a full reading size, and get a heavier outline so they read on the paper.
+  const narrow = vb.w < 1200
+  const captionY = (c: Frame['captions'][number]) =>
+    c.id === 'c1'
+      ? narrow ? VIEW_H + 190 : Math.min(vb.y + vb.h - 70, VIEW_H + 130)
+      : c.id === 'c2'
+        ? narrow ? -150 : Math.max(vb.y, 0) + 120
+        : c.kind === 'title'
+          ? VIEW_H / 2 + 70
+          : VIEW_H / 2 - 40
+  const captionSize = (c: Frame['captions'][number]) =>
+    c.kind === 'title' ? 96 * Math.min(1, vb.w / 1250) : narrow ? 64 : 60 * Math.min(1, vb.w / 1250)
   const photoScale = 0.6 + 0.4 * (1 - photo)
   const photoRot = -3.5 * photo
   const world = `translate(${VIEW_W / 2} ${VIEW_H / 2}) scale(${camera.zoom}) translate(${-camera.x} ${-camera.y})`
@@ -253,23 +270,16 @@ export function StoryPlayer({ onFinished, reducedMotion }: StoryPlayerProps) {
             <text
               key={c.id}
               x={VIEW_W / 2}
-              y={
-                c.id === 'c1'
-                  ? Math.min(vb.y + vb.h - 70, VIEW_H + 130)
-                  : c.id === 'c2'
-                    ? Math.max(vb.y, 0) + 120
-                    : c.kind === 'title'
-                      ? VIEW_H / 2 + 70
-                      : VIEW_H / 2 - 40
-              }
+              y={captionY(c)}
               textAnchor="middle"
               opacity={c.opacity}
               fontFamily={c.kind === 'title' ? "'Orbitron', sans-serif" : "'Patrick Hand', cursive"}
-              fontSize={(c.kind === 'title' ? 96 : 60) * Math.min(1, vb.w / 1250)}
+              fontSize={captionSize(c)}
               letterSpacing={(c.kind === 'title' ? 18 : 1) * Math.min(1, vb.w / 1250)}
               fill={c.id === 'c1' || c.id === 'c2' ? '#f3e2bb' : '#4a2c12'}
               stroke={c.id === 'c1' || c.id === 'c2' ? '#3b2412' : 'none'}
-              strokeWidth={c.id === 'c1' || c.id === 'c2' ? 1.4 : 0}
+              strokeWidth={c.id === 'c1' || c.id === 'c2' ? (narrow ? 7 : 1.4) : 0}
+              strokeLinejoin={narrow ? 'round' : undefined}
               paintOrder="stroke"
             >
               {c.text}

@@ -1,7 +1,9 @@
 import { Suspense, forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { DEFAULT_AMBIENT } from './ambient'
 import { DPR_FOR_TIER, lowerStoredTier, lowerTier, tierForRenderer, type GraphicsTier } from './performanceTier'
-import { Canvas } from '@react-three/fiber'
+import { Canvas, useThree } from '@react-three/fiber'
+import type { PerspectiveCamera } from 'three'
+import { BASE_CAMERA_FOV, cameraFovForAspect } from './navigation/geo'
 import { PerformanceMonitor } from '@react-three/drei'
 import { GlobeScene } from './GlobeScene'
 import { GlobeErrorBoundary } from './GlobeErrorBoundary'
@@ -15,6 +17,21 @@ import type { GlobeLayers } from './atlas/LineLayers'
 import type { SatelliteSpec } from './ambient/orbits'
 import type { CelestialSpec } from './ambient/planets'
 import './globe.css'
+
+/** Keeps the camera FOV matched to the canvas aspect (wider only on portrait phones). */
+function ResponsiveFov() {
+  const get = useThree((s) => s.get)
+  const width = useThree((s) => s.size.width)
+  const height = useThree((s) => s.size.height)
+  useEffect(() => {
+    const camera = get().camera as PerspectiveCamera
+    const fov = cameraFovForAspect(width / Math.max(1, height))
+    if (Math.abs(camera.fov - fov) < 0.01) return
+    camera.fov = fov
+    camera.updateProjectionMatrix()
+  }, [get, width, height])
+  return null
+}
 
 function GlobeFallback() {
   return (
@@ -191,7 +208,7 @@ export const GlobeCanvas = forwardRef<GlobeNavigationApi | null, GlobeCanvasProp
               alpha: false,
               powerPreference: 'high-performance',
             }}
-            camera={{ position: [0, 0.7, 2.6], fov: 42, near: 0.1, far: 420 }}
+            camera={{ position: [0, 0.7, 2.6], fov: BASE_CAMERA_FOV, near: 0.1, far: 420 }}
             onCreated={({ gl }) => {
               gl.setClearColor('#030712')
               gl.domElement.style.touchAction = 'none'
@@ -204,6 +221,7 @@ export const GlobeCanvas = forwardRef<GlobeNavigationApi | null, GlobeCanvasProp
               setGpuCap((cap) => lowerTier(cap, gpuTier))
             }}
           >
+            <ResponsiveFov />
             <PerformanceMonitor
               onDecline={() => {
                 // Resolution first; once it's at the floor, shed scene detail instead.

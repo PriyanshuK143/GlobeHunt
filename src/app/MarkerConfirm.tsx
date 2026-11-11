@@ -57,7 +57,7 @@ export function MarkerConfirm({ store, enabled, onConfirm }: MarkerConfirmProps)
           </button>
         </>
       ) : (
-        <span className="marker-confirm__hint">Tap the globe to drop your target</span>
+        <span className="marker-confirm__hint">Tap the globe to drop your marker</span>
       )}
     </div>
   )

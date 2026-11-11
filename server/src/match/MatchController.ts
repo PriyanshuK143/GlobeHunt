@@ -147,7 +147,7 @@ export class MatchController {
   returnToLobby(socketId: string): PublicRoom | null {
     const ref = this.rooms.getPlayerRef(socketId)
     if (!ref) throw new Error('Not in a room')
-    if (ref.player.id !== ref.room.hostId) throw new Error('Only the host can return to lobby')
+    if (ref.player.id !== ref.room.hostId) throw new Error('Only the host can return to the lobby')
     return this.rooms.resetToLobby(ref.room)
   }
 

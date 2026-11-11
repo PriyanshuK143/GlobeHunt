@@ -23,7 +23,7 @@ export function ResultsScreen({ summary, onPlayAgain, onMenu }: ResultsScreenPro
     <div className="overlay-panel overlay-panel--card">
       <h2 className="overlay-panel__heading">Results</h2>
       <p className="overlay-panel__sub">
-        {DIFFICULTY_LABEL[summary.config.difficulty]} · {summary.config.rounds} rounds
+        {DIFFICULTY_LABEL[summary.config.difficulty]} · {summary.results.length} {summary.results.length === 1 ? 'round' : 'rounds'}
       </p>
 
       <p className="results-score">{summary.totalScore}</p>
