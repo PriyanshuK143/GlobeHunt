@@ -1,0 +1,196 @@
+/* ───────── Pass & Play ───────── */
+
+/* Setup: one row per player — colour swatch + name. */
+.pp-seats {
+  list-style: none;
+  margin: 0.7rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+.pp-seat {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.pp-seat__field {
+  flex: 1;
+  margin: 0;
+}
+.pp-seat__field input {
+  width: 100%;
+  min-width: 0;
+}
+.pp-swatch {
+  flex: none;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  border: 2px solid rgba(232, 241, 255, 0.85);
+  background: var(--player-color);
+  box-shadow: 0 0 0 3px rgba(3, 7, 18, 0.9);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.pp-swatch:hover { transform: scale(1.06); }
+.pp-swatch:active { transform: scale(0.94); }
+.pp-swatch:focus-visible { outline: 2px solid var(--gh-accent-2); outline-offset: 3px; }
+
+/* Player chip in the HUD and on scoreboards. */
+.hud-stat--player {
+  border-color: color-mix(in srgb, var(--player-color) 55%, transparent);
+  box-shadow: inset 0 -2px 0 var(--player-color);
+}
+.hud-stat__player {
+  max-width: 9.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.95rem;
+  color: var(--player-color);
+}
+.pp-row__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.pp-dot {
+  flex: none;
+  width: 0.62rem;
+  height: 0.62rem;
+  border-radius: 50%;
+  background: var(--player-color);
+}
+.pp-row.is-winner {
+  border-color: color-mix(in srgb, var(--player-color) 60%, transparent);
+}
+
+/* Hand-off: fully opaque and above everything in the game (HUD, cards, pause menu),
+   so no part of the previous turn is visible or clickable. */
+.pp-handoff {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: radial-gradient(ellipse 80% 60% at 50% 45%, #0a1830 0%, var(--gh-bg) 70%);
+  pointer-events: auto;
+  touch-action: none;
+}
+.pp-handoff__inner {
+  display: grid;
+  justify-items: center;
+  gap: 0.55rem;
+  max-width: 26rem;
+  text-align: center;
+}
+.pp-handoff__meta {
+  margin: 0 0 0.4rem;
+  color: var(--gh-muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.pp-handoff__title {
+  margin: 0 0 0.6rem;
+  font-family: 'Orbitron', 'Segoe UI', sans-serif;
+  font-size: clamp(1.5rem, 6vw, 2.2rem);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.pp-handoff__to {
+  margin: 0;
+  font-size: 1.15rem;
+}
+.pp-handoff__name {
+  color: var(--player-color);
+}
+.pp-handoff__note {
+  margin: 0;
+  color: var(--gh-muted);
+}
+.pp-handoff__ready {
+  margin-top: 1.2rem;
+  min-width: 11rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.pp-handoff__quit {
+  margin-top: 0.6rem;
+  padding: 0.4rem 0.8rem;
+  border: 0;
+  background: none;
+  color: var(--gh-muted);
+  font: inherit;
+  font-size: 0.85rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.pp-handoff__quit:hover { color: var(--gh-text); }
+@media (prefers-reduced-motion: no-preference) {
+  .pp-handoff__inner { animation: pp-in 0.28s ease-out both; }
+}
+@keyframes pp-in {
+  from { opacity: 0; transform: translateY(6px); }
+}
+
+/* Reveal scoreboard: two columns of compact cells, so six players stay short and
+   the answer on the globe remains visible. */
+.pp-board {
+  list-style: none;
+  margin: 0.7rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+.pp-cell {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+  padding: 0.38rem 0.55rem 0.42rem;
+  border: 1px solid var(--gh-stroke);
+  border-radius: 10px;
+  background: rgba(12, 28, 52, 0.55);
+}
+.pp-cell__top {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  font-size: 0.86rem;
+}
+.pp-cell__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pp-cell__total {
+  font-weight: 600;
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+}
+.pp-cell__detail {
+  font-size: 0.72rem;
+  color: var(--gh-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pp-cell.is-correct .pp-cell__detail { color: #8ee0b0; }
+
+/* Final results: Rematch on top, the two other choices side by side. */
+.pp-final-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+.pp-final-actions .gh-btn { width: 100%; }
+.pp-final-actions__main { grid-column: 1 / -1; }
+.player-list .pp-row { padding-block: 0.45rem; }

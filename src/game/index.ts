@@ -27,5 +27,16 @@ export type {
   TimerSeconds,
 } from './types'
 export { discoveryInfoFor, discoveryInfoForReveal } from './discovery'
-export { labelFilterFor, labelTargetFor, labelTargetForId, labelTargetForMultiplayer, type LabelTarget } from './labels'
+export { labelFilterFor, labelTargetFor, labelTargetForId, labelTargetForMultiplayer, practiceTargetLabels, type LabelTarget } from './labels'
 export { loadPool, poolEntryById } from './data/pool'
+export {
+  usePassAndPlay,
+  PASS_PLAY_COLORS,
+  PASS_PLAY_MAX_PLAYERS,
+  PASS_PLAY_MIN_PLAYERS,
+  type PassPlayApi,
+  type PassPlayGuess,
+  type PassPlayPhase,
+  type PassPlayPlayer,
+  type PassPlayRanking,
+} from './rounds/usePassAndPlay'

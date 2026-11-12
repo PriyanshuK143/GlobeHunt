@@ -24,7 +24,7 @@ export function CreateJoinForms({
       <h2 className="overlay-panel__heading">
         {mode === 'create' ? 'Create Room' : 'Join Room'}
       </h2>
-      <p className="overlay-panel__sub">Session nickname only — no account needed</p>
+      <p className="overlay-panel__sub">No account needed</p>
 
       <label className="field">
         <span>Nickname</span>

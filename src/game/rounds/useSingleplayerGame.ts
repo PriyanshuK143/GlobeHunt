@@ -17,6 +17,9 @@ import type {
   RoundResult,
 } from '../types'
 
+/** Practice draws locations in batches and tops up whenever a batch runs out. */
+const PRACTICE_BATCH = 20
+
 export interface SingleplayerGameApi {
   phase: GamePhase
   config: GameConfig
@@ -32,6 +35,11 @@ export interface SingleplayerGameApi {
   summary: MatchSummary | null
   error: string | null
   pickingEnabled: boolean
+  /** Practice: the normal round engine with unlimited locations, ended by the player. */
+  practice: boolean
+  setPractice: (practice: boolean) => void
+  /** Practice only: stop and show the session summary. */
+  endPractice: () => void
   /** Round frozen by the pause menu. */
   paused: boolean
   pause: () => boolean
@@ -59,6 +67,8 @@ export function useSingleplayerGame(): SingleplayerGameApi {
   const [successFlash, setSuccessFlash] = useState(0)
   const [pickingEnabled, setPickingEnabled] = useState(false)
   const [countryIndex, setCountryIndex] = useState<Map<string, CountryRecord> | null>(null)
+  const [practice, setPracticeState] = useState(false)
+  const practiceRef = useRef(false)
 
   const roundStartRef = useRef(0)
   const attemptsRef = useRef(0)
@@ -76,6 +86,7 @@ export function useSingleplayerGame(): SingleplayerGameApi {
   const pickingRef = useRef(false)
 
   configRef.current = config
+  practiceRef.current = practice
   phaseRef.current = phase
   pickingRef.current = pickingEnabled
   countryIndexRef.current = countryIndex
@@ -94,6 +105,11 @@ export function useSingleplayerGame(): SingleplayerGameApi {
 
   const setConfig = useCallback((patch: Partial<GameConfig>) => {
     setConfigState((prev) => ({ ...prev, ...patch }))
+  }, [])
+
+  const setPractice = useCallback((value: boolean) => {
+    practiceRef.current = value
+    setPracticeState(value)
   }, [])
 
   const openConfig = useCallback(() => {
@@ -250,7 +266,8 @@ export function useSingleplayerGame(): SingleplayerGameApi {
         setCountryIndex(index)
         countryIndexRef.current = index
 
-        const list = await selectChallenges(configRef.current.difficulty, configRef.current.rounds)
+        const count = practiceRef.current ? PRACTICE_BATCH : configRef.current.rounds
+        const list = await selectChallenges(configRef.current.difficulty, count)
         setChallenges(list)
         challengesRef.current = list
         await beginRound(0, list, globe)
@@ -266,7 +283,19 @@ export function useSingleplayerGame(): SingleplayerGameApi {
   const continueAfterRound = useCallback(
     async (globe: GlobeNavigationApi | null) => {
       const next = roundIndexRef.current + 1
-      const list = challengesRef.current
+      let list = challengesRef.current
+      if (practiceRef.current && next >= list.length) {
+        // Practice never runs out: top up with a fresh batch (no repeats within the session).
+        try {
+          const seen = new Set(list.map((c) => c.id))
+          const more = (await selectChallenges(configRef.current.difficulty, PRACTICE_BATCH)).filter((c) => !seen.has(c.id))
+          list = [...list, ...more]
+          setChallenges(list)
+          challengesRef.current = list
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Couldn’t load more locations')
+        }
+      }
       if (next >= list.length) {
         setSummary(summarizeMatch(configRef.current, resultsRef.current))
         setPhase('results')
@@ -276,6 +305,14 @@ export function useSingleplayerGame(): SingleplayerGameApi {
     },
     [beginRound],
   )
+
+  const endPractice = useCallback(() => {
+    beginTokenRef.current += 1
+    clearTimer()
+    setPickingEnabled(false)
+    setSummary(summarizeMatch({ ...configRef.current, rounds: resultsRef.current.length }, resultsRef.current))
+    setPhase('results')
+  }, [clearTimer])
 
   const playAgain = useCallback(
     async (globe: GlobeNavigationApi | null) => {
@@ -313,7 +350,7 @@ export function useSingleplayerGame(): SingleplayerGameApi {
     setConfig,
     currentChallenge,
     roundIndex,
-    totalRounds: challenges.length || config.rounds,
+    totalRounds: practice ? roundIndex + 1 : challenges.length || config.rounds,
     remainingMs,
     totalScore,
     lastRoundResult,
@@ -322,6 +359,9 @@ export function useSingleplayerGame(): SingleplayerGameApi {
     summary,
     error,
     pickingEnabled,
+    practice,
+    setPractice,
+    endPractice,
     paused,
     pause,
     resume,

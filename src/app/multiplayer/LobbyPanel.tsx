@@ -30,6 +30,10 @@ export function LobbyPanel({
 
   const link = inviteLink(room.code)
   const [copied, setCopied] = useState<'idle' | 'ok' | 'fail'>('idle')
+  // The link is shown only if copying fails, so it can still be selected by hand.
+  const [showLink, setShowLink] = useState(false)
+  // Host settings collapse to a one-line summary; "Change" opens the full options.
+  const [editing, setEditing] = useState(false)
   const resetTimer = useRef<number | null>(null)
   useEffect(() => () => {
     if (resetTimer.current) window.clearTimeout(resetTimer.current)
@@ -59,6 +63,7 @@ export function LobbyPanel({
   const copyInvite = async () => {
     const ok = await copyText(link)
     setCopied(ok ? 'ok' : 'fail')
+    if (!ok) setShowLink(true)
     if (resetTimer.current) window.clearTimeout(resetTimer.current)
     resetTimer.current = window.setTimeout(() => setCopied('idle'), 2200)
   }
@@ -81,12 +86,14 @@ export function LobbyPanel({
             {copied === 'ok' ? 'Link Copied' : copied === 'fail' ? 'Copy Failed' : 'Copy Invite Link'}
           </button>
         </div>
-        <p className="lobby-invite">
-          <span className="lobby-invite__label">Same Wi-Fi? Share this link</span>
-          <span className="lobby-invite__url" onClick={(e) => window.getSelection()?.selectAllChildren(e.currentTarget)}>
-            {link}
-          </span>
-        </p>
+        {showLink ? (
+          <p className="lobby-invite">
+            <span className="lobby-invite__label">Invite link</span>
+            <span className="lobby-invite__url" onClick={(e) => window.getSelection()?.selectAllChildren(e.currentTarget)}>
+              {link}
+            </span>
+          </p>
+        ) : null}
 
         <p className="overlay-panel__sub">
           Players {connected.length}/{room.maxPlayers}
@@ -113,12 +120,20 @@ export function LobbyPanel({
         </ul>
 
         <div className="setup-panel__lobby">
-          <p className="setup-panel__mode">Multiplayer · {isHost ? 'You are the host' : 'The host chooses the settings'}</p>
-          {isHost ? (
-            <GameSetupOptions config={{ ...DEFAULT_MP_CONFIG, ...room.config }} onChange={onConfig} />
-          ) : (
-            <p className="overlay-panel__sub">{configSummary({ ...DEFAULT_MP_CONFIG, ...room.config })}</p>
-          )}
+          <div className="lobby-settings">
+            <div className="lobby-settings__text">
+              <p className="setup-panel__mode">{isHost ? 'Game settings' : 'Game settings · chosen by the host'}</p>
+              {editing && isHost ? null : (
+                <p className="lobby-settings__summary">{configSummary({ ...DEFAULT_MP_CONFIG, ...room.config })}</p>
+              )}
+            </div>
+            {isHost ? (
+              <button type="button" className="gh-btn gh-btn--ghost lobby-settings__toggle" onClick={() => setEditing((v) => !v)} aria-expanded={editing}>
+                {editing ? 'Done' : 'Change'}
+              </button>
+            ) : null}
+          </div>
+          {isHost && editing ? <GameSetupOptions config={{ ...DEFAULT_MP_CONFIG, ...room.config }} onChange={onConfig} /> : null}
         </div>
 
         {error ? (

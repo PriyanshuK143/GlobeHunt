@@ -15,14 +15,41 @@ const GRID_PX = 8
 /** Breathing room around each label (px), so text never packs edge to edge. */
 const PAD_X = 10
 const PAD_Y = 6
-/** One label per this many px² of screen — keeps the map readable, Google-Maps-like. */
-const AREA_PER_LABEL = 9500
+/**
+ * Screen area per label (px²), by zoom: generous when zoomed out (only the big names),
+ * tighter close in where there is more to read. Keeps the map readable, Google-Maps-like.
+ */
+const AREA_PER_LABEL_NEAR = 9000
+const AREA_PER_LABEL_FAR = 17000
+const NEAR_DISTANCE = 1.3
+const FAR_DISTANCE = 3.2
+const MIN_LABELS = 18
+
+/**
+ * Limb margin: a label is shown only where the globe surface faces the camera enough
+ * (cosine between the surface normal and the direction to the camera). Text near the
+ * curved silhouette is squashed and crowded, so it is dropped well before the horizon.
+ * Major names (countries, oceans) may sit a little closer to the edge than minor ones,
+ * and every label fades out across FACING_FADE before it disappears.
+ */
+const LABEL_LIMB_MARGIN = { major: 0.3, minor: 0.45 }
+const MAJOR_PRIORITY = 80
+const FACING_FADE = 0.12
+/** Labels stay this far (px) inside the viewport edges. */
+const EDGE_PAD = 10
+/** On-screen UI the labels must keep clear of (HUD, answer bar, cards, corner readouts). */
+const LABEL_AVOID_SELECTOR =
+  '.game-hud__top, .game-hud__challenge, .marker-confirm, .discovery-card, .space-corner, .hud-menu-btn, .overlay-panel, [data-label-avoid]'
+/** How often the UI rectangles are re-measured (s); also on resize. */
+const AVOID_REFRESH = 0.4
 /** Minor kinds appear later than their data tier suggests (less clutter). */
 const KIND_ZOOM: Partial<Record<string, number>> = { village: 0.985, port: 0.88, airport: 0.92, landmark: 0.92, admin1: 0.95 }
 const REQUEST_INTERVAL = 0.25
 
 interface Prepared extends AtlasLabel {
   dir: THREE.Vector3
+  /** Surface-facing factor for this frame (see LABEL_LIMB_MARGIN). */
+  facing: number
   display: string
   style: LabelStyle
   width: number
@@ -38,7 +65,6 @@ export interface AtlasLabelsProps {
   filter?: LabelFilterFactory
 }
 
-const _v = new THREE.Vector3()
 const _w = new THREE.Vector3()
 const _camDir = new THREE.Vector3()
 
@@ -60,7 +86,9 @@ class LabelRegistry {
     let added = 0
     for (const l of list) {
       if (this.ids.has(l.id)) continue
-      const key = dedupeKey(l)
+      // Pinned labels ("pin:" ids) never merge with a real label, so removing one later
+      // can't take the real label with it.
+      const key = l.id.startsWith('pin:') ? l.id : dedupeKey(l)
       const existing = this.keys.get(key)
       if (existing && existing.priority >= l.priority) continue
       this.ids.add(l.id)
@@ -69,6 +97,7 @@ class LabelRegistry {
       const p: Prepared = {
         ...l,
         dir: latLngToVector3(l.lat, l.lng, EARTH_RADIUS * 1.002),
+        facing: 0,
         display: style.upper ? base.toUpperCase() : base,
         style,
         width: -1,
@@ -93,6 +122,17 @@ class LabelRegistry {
       added++
     }
     if (added) this.version++
+  }
+
+  /** Drop labels by id (used for per-round extras such as the Practice target name). */
+  remove(drop: ReadonlySet<string>) {
+    if (!drop.size) return
+    const gone = (p: Prepared) => drop.has(p.id)
+    this.all = this.all.filter((p) => !gone(p))
+    for (const [cell, list] of this.buckets) this.buckets.set(cell, list.filter((p) => !gone(p)))
+    for (const [key, p] of this.keys) if (gone(p)) this.keys.delete(key)
+    for (const id of drop) this.ids.delete(id)
+    this.version++
   }
 
   bucket(cell: number): Prepared[] | undefined {
@@ -158,6 +198,25 @@ interface Placement {
   angle: number
   /** Per-character positions for curved river labels. */
   glyphs?: Array<{ ch: string; x: number; y: number; a: number }>
+  /** Extra fade as the label nears the limb margin. */
+  edge: number
+}
+
+const LABEL_RADIUS = EARTH_RADIUS * 1.002
+
+/** Cosine between the surface normal at `p` and the direction from `p` to the camera. */
+function facingOf(p: THREE.Vector3, cam: THREE.Vector3, camLen2: number): number {
+  const pc = p.dot(cam)
+  return (pc / LABEL_RADIUS - LABEL_RADIUS) / Math.sqrt(Math.max(1e-9, camLen2 + LABEL_RADIUS * LABEL_RADIUS - 2 * pc))
+}
+
+function minFacing(l: AtlasLabel): number {
+  return l.priority >= MAJOR_PRIORITY ? LABEL_LIMB_MARGIN.major : LABEL_LIMB_MARGIN.minor
+}
+
+const smooth = (t: number) => {
+  const x = Math.min(1, Math.max(0, t))
+  return x * x * (3 - 2 * x)
 }
 
 /**
@@ -182,6 +241,8 @@ export function AtlasLabels({ canvasRef, enabled, extra, filter }: AtlasLabelsPr
   const occupancy = useRef(new Occupancy())
   const measureCtx = useRef<CanvasRenderingContext2D | null>(null)
   const glyphWidth = useRef(new Map<string, number>())
+  const avoid = useRef<Array<[number, number, number, number]>>([])
+  const sinceAvoid = useRef(AVOID_REFRESH)
 
   // Sources: country names, packaged atlas tiles (progressive), game extras.
   useEffect(() => {
@@ -206,9 +267,12 @@ export function AtlasLabels({ canvasRef, enabled, extra, filter }: AtlasLabelsPr
     }
   }, [])
 
+  // Extras belong to the current round: the previous set is removed when they change.
+  const extraIds = useRef(new Set<string>())
   useEffect(() => {
-    if (!extra) return
-    registry.current.add(extra.map((e) => ({ ...e, tier: 'static' })))
+    registry.current.remove(extraIds.current)
+    extraIds.current = new Set(extra?.map((e) => e.id) ?? [])
+    if (extra?.length) registry.current.add(extra.map((e) => ({ ...e, tier: 'static' })))
     setRegVersion(registry.current.version)
   }, [extra])
 
@@ -308,10 +372,27 @@ export function AtlasLabels({ canvasRef, enabled, extra, filter }: AtlasLabelsPr
     master.current += (targetMaster - master.current) * (1 - Math.exp(-FADE_RATE * dt))
     if (Math.abs(master.current - targetMaster) < 0.005) master.current = targetMaster
 
+    // Re-measure the UI the labels must avoid (cheap: a handful of elements, a few times a second).
+    sinceAvoid.current += dt
+    let avoidChanged = false
+    if (enabled && (resized || sinceAvoid.current >= AVOID_REFRESH)) {
+      sinceAvoid.current = 0
+      const origin = canvas.getBoundingClientRect()
+      const next: Array<[number, number, number, number]> = []
+      document.querySelectorAll(LABEL_AVOID_SELECTOR).forEach((el) => {
+        const r = el.getBoundingClientRect()
+        if (r.width > 0 && r.height > 0) next.push([r.left - origin.left, r.top - origin.top, r.right - origin.left, r.bottom - origin.top])
+      })
+      const prev = avoid.current
+      avoidChanged = next.length !== prev.length || next.some((r, i) => r.some((v, j) => Math.abs(v - prev[i][j]) > 1))
+      avoid.current = next
+    }
+
     const moved = !lastMatrix.current.equals(camera.matrixWorld)
     if (moved) lastMatrix.current.copy(camera.matrixWorld)
-    if (!moved && !resized && settled.current && master.current === targetMaster) return
+    if (!moved && !resized && !avoidChanged && settled.current && master.current === targetMaster) return
 
+    const frameStart = performance.now()
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     ctx.setTransform(1, 0, 0, 1, 0, 0)
@@ -323,11 +404,16 @@ export function AtlasLabels({ canvasRef, enabled, extra, filter }: AtlasLabelsPr
     ctx.scale(dpr, dpr)
 
     _camDir.copy(camera.position).normalize()
-    const horizonCos = EARTH_RADIUS / dist
+    const camPos = camera.position
+    const camLen2 = camPos.lengthSq()
+    // Inside the camera's view cone (diagonal half-angle plus a little slack).
+    const coneCos = Math.cos(Math.min(Math.PI / 2, halfDiag * 1.04))
     const cellReach = Math.cos(Math.min(Math.PI, ground + THREE.MathUtils.degToRad(CELL_DEG * 0.75 + 2)))
     const hidden = filterFn.current
 
-    // 1. Candidates from nearby cells that are in tier and on the visible hemisphere.
+    // 1. Candidates: nearby cells only (the region in view), in zoom tier, and genuinely
+    //    facing the camera — far side and the crowded limb are filtered out here, before
+    //    any measuring, projecting or drawing.
     const candidates: Prepared[] = []
     for (let cell = 0; cell < CELL_CENTERS.length; cell++) {
       if (CELL_CENTERS[cell].dot(_camDir) < cellReach) continue
@@ -335,23 +421,30 @@ export function AtlasLabels({ canvasRef, enabled, extra, filter }: AtlasLabelsPr
       if (!bucket) continue
       for (const l of bucket) {
         if (l.maxDistance * (KIND_ZOOM[l.kind] ?? 1) < dist * 0.97) continue
-        if (l.dir.dot(_camDir) / l.dir.length() < horizonCos + 0.02) continue
+        const f = facingOf(l.dir, camPos, camLen2)
+        if (f < minFacing(l)) continue
+        if (!l.lineDirs && (dist - l.dir.dot(_camDir)) / l.dir.distanceTo(camPos) < coneCos) continue
         if (hidden && !hidden(l)) continue
+        l.facing = f
         candidates.push(l)
       }
     }
     candidates.sort((a, b) => b.priority - a.priority)
 
-    // 2. Priority-ordered placement on the occupancy grid.
+    // 2. Priority-ordered placement on the occupancy grid. UI panels are reserved first
+    //    so no label is drawn under the HUD, the answer bar or a card.
     const occ = occupancy.current
     occ.reset(size.width, size.height)
+    for (const [x0, y0, x1, y1] of avoid.current) occ.mark(x0 - 4, y0 - 4, x1 + 4, y1 + 4)
+    const zoomT = smooth((dist - NEAR_DISTANCE) / (FAR_DISTANCE - NEAR_DISTANCE))
+    const areaPerLabel = AREA_PER_LABEL_NEAR + (AREA_PER_LABEL_FAR - AREA_PER_LABEL_NEAR) * zoomT
+    const maxPlaced = Math.max(MIN_LABELS, Math.round((size.width * size.height) / areaPerLabel))
     const placed: Placement[] = []
     const placedIds = new Set<string>()
-    const maxPlaced = Math.max(40, Math.round((size.width * size.height) / AREA_PER_LABEL))
     for (const l of candidates) {
       if (placed.length >= maxPlaced) break
       const p = project(l.dir)
-      if (p.x < -200 || p.x > size.width + 200 || p.y < -60 || p.y > size.height + 60) continue
+      if (p.z > 1 || p.x < -EDGE_PAD || p.x > size.width + EDGE_PAD || p.y < -EDGE_PAD || p.y > size.height + EDGE_PAD) continue
       const placement = l.lineDirs ? placeAlongLine(l, ctx) : placePoint(l, p)
       if (!placement) continue
       placed.push(placement)
@@ -374,10 +467,11 @@ export function AtlasLabels({ canvasRef, enabled, extra, filter }: AtlasLabelsPr
       const x1 = cx + hw
       const y0 = p.y - hh
       const y1 = p.y + hh
-      if (x1 < 0 || x0 > size.width || y1 < 0 || y0 > size.height) return null
+      // Fully inside the viewport: no text overflowing the screen edges.
+      if (x0 < EDGE_PAD || x1 > size.width - EDGE_PAD || y0 < EDGE_PAD || y1 > size.height - EDGE_PAD) return null
       if (!occ.free(x0 - PAD_X, y0 - PAD_Y, x1 + PAD_X, y1 + PAD_Y)) return null
       occ.mark(x0, y0, x1, y1)
-      return { label: l, x: p.x, y: p.y, angle }
+      return { label: l, x: p.x, y: p.y, angle, edge: smooth((l.facing - minFacing(l)) / FACING_FADE) }
     }
 
     function placeAlongLine(l: Prepared, c: CanvasRenderingContext2D): Placement | null {
@@ -395,10 +489,11 @@ export function AtlasLabels({ canvasRef, enabled, extra, filter }: AtlasLabelsPr
         run = []
         runLen = 0
       }
+      const need = minFacing(l)
       for (const d of l.lineDirs!) {
-        const facing = d.dot(_camDir) / d.length() > horizonCos + 0.03
+        const facing = facingOf(d, camPos, camLen2) > need
         const q = facing ? project(d) : null
-        const onScreen = q && q.x > 0 && q.x < size.width && q.y > 0 && q.y < size.height
+        const onScreen = q && q.x > EDGE_PAD && q.x < size.width - EDGE_PAD && q.y > EDGE_PAD && q.y < size.height - EDGE_PAD
         if (!onScreen) {
           flush()
           continue
@@ -439,7 +534,7 @@ export function AtlasLabels({ canvasRef, enabled, extra, filter }: AtlasLabelsPr
       for (const g of glyphs) if (!occ.free(g.x - r, g.y - r, g.x + r, g.y + r)) return null
       for (const g of glyphs) occ.mark(g.x - r, g.y - r, g.x + r, g.y + r)
       void c
-      return { label: l, x: glyphs[0].x, y: glyphs[0].y, angle: 0, glyphs }
+      return { label: l, x: glyphs[0].x, y: glyphs[0].y, angle: 0, glyphs, edge: 1 }
     }
 
     // 3. Draw: placed labels fade in; recently dropped ones fade out in place.
@@ -451,7 +546,7 @@ export function AtlasLabels({ canvasRef, enabled, extra, filter }: AtlasLabelsPr
       const done = a > 0.99 ? 1 : a
       if (done !== 1) animating = true
       alpha.current.set(pl.label.id, done)
-      draw(ctx, pl, done * master.current)
+      draw(ctx, pl, done * master.current * pl.edge)
     }
     for (const [id, prev] of alpha.current) {
       if (placedIds.has(id)) continue
@@ -464,6 +559,14 @@ export function AtlasLabels({ canvasRef, enabled, extra, filter }: AtlasLabelsPr
       alpha.current.set(id, a)
     }
     settled.current = !animating
+    // Dev-only counters for checking label density and cost.
+    if (import.meta.env.DEV) {
+      ;(window as Window & { __GLOBEHUNT_LABELS__?: unknown }).__GLOBEHUNT_LABELS__ = {
+        candidates: candidates.length,
+        placed: placed.length,
+        ms: performance.now() - frameStart,
+      }
+    }
   })
 
   return null
@@ -517,6 +620,5 @@ function draw(ctx: CanvasRenderingContext2D, pl: Placement, a: number) {
       ctx.fillText(l.display, pl.x, pl.y)
     }
   }
-  _v.set(0, 0, 0)
   ctx.globalAlpha = 1
 }

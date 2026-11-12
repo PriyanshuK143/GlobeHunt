@@ -45,13 +45,7 @@ export function MpGameHUD({
       <div className="game-hud__challenge">
         <span className="game-hud__difficulty">{room.config.difficulty}</span>
         <h2 className="game-hud__target">{travelling ? 'Travelling…' : challenge?.name ?? '…'}</h2>
-        <p className={`game-hud__prompt ${travelling || finished ? '' : 'is-instruction'}`}>
-          {travelling
-            ? 'Heading to the next region'
-            : finished
-              ? 'Found! Waiting for other players…'
-              : 'Drop your marker, drag to adjust, then confirm'}
-        </p>
+        {finished && !travelling ? <p className="game-hud__prompt">Found! Waiting for the other players…</p> : null}
       </div>
     </div>
   )
@@ -60,10 +54,11 @@ export function MpGameHUD({
 interface MpRoundProps {
   view: MpRoundResultView
   selfId: string | null
+  isLast?: boolean
 }
 
 /** Round end for everyone at once: reveal + discovery info + round leaderboard. */
-export function MpRoundResultPanel({ view, selfId }: MpRoundProps) {
+export function MpRoundResultPanel({ view, selfId, isLast = false }: MpRoundProps) {
   const info = view.reveal
     ? discoveryInfoForReveal(view.challengeName, view.reveal)
     : { name: view.challengeName, subtitle: '', location: { lat: 0, lng: 0 } }
@@ -72,15 +67,7 @@ export function MpRoundResultPanel({ view, selfId }: MpRoundProps) {
     <DiscoveryCard
       info={info}
       found={me?.outcome === 'correct'}
-      stats={
-        me
-          ? [
-              { label: 'Your time', value: me.outcome === 'correct' && me.elapsedMs != null ? `${(me.elapsedMs / 1000).toFixed(1)}s` : '—' },
-              { label: 'Points', value: `+${me.score}` },
-            ]
-          : undefined
-      }
-      footer={<p className="overlay-hint">Next location coming up…</p>}
+      footer={<p className="overlay-hint">{isLast ? 'Final results coming up…' : 'Next location coming up…'}</p>}
     >
       <ol className="player-list discovery-card__board">
         {view.results.map((r, i) => (
@@ -90,7 +77,7 @@ export function MpRoundResultPanel({ view, selfId }: MpRoundProps) {
               {r.outcome === 'correct' && r.elapsedMs != null ? ` · ${(r.elapsedMs / 1000).toFixed(1)}s` : ' · missed'}
             </span>
             <span>
-              +{r.score} · {r.totalScore}
+              +{r.score} · {r.totalScore} total
             </span>
           </li>
         ))}

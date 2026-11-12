@@ -87,7 +87,6 @@
   .game-hud__difficulty { margin-bottom: 0.08rem; font-size: 0.6rem; letter-spacing: 0.18em; }
   .game-hud__target { font-size: 1.15rem; line-height: 1.25; }
   .game-hud__prompt { margin-top: 0.15rem; font-size: 0.78rem; line-height: 1.3; }
-  .game-hud__prompt.is-instruction { display: none; }
 
   .hud-menu-btn {
     top: calc(1.55rem + env(safe-area-inset-top, 0px));
@@ -96,13 +95,12 @@
     height: 44px;
     border-radius: 14px;
   }
-  /* Diagnostics (FPS / ping) sat in the top-right corner directly over the pause key.
-     On phones they move to the centre of the status strip, so the right edge belongs
-     to the control alone; the clock keeps the left. */
+  /* Diagnostics (FPS / ping) sit in the thin status strip above the HUD, opposite the
+     clock — above the pause key, not on it. */
   .space-corners.is-gameplay .space-corner--tr {
-    left: 50%;
-    right: auto;
-    transform: translateX(-50%);
+    left: auto;
+    right: calc(0.75rem + env(safe-area-inset-right, 0px));
+    transform: none;
     white-space: nowrap;
   }
 
@@ -618,7 +616,6 @@
   .setup-panel .overlay-panel__heading { margin-bottom: 0.45rem; }
   .setup-options .option-chip { padding-block: 0.45rem 0.5rem; }
   /* "Show place names on map" already says it; the wrapped note was clipped. */
-  .labels-toggle__note { display: none; }
   .setup-panel .overlay-actions,
   .lobby-panel .overlay-actions { padding-block: 0.6rem calc(0.65rem + env(safe-area-inset-bottom, 0px)); }
   .setup-panel .overlay-actions,
@@ -635,7 +632,7 @@
   .overlay-panel--card:has(.results-grid) .overlay-panel__sub { margin-bottom: 0.4rem; }
   .results-score { margin-top: 0; font-size: 2rem; line-height: 1.1; }
   .results-score-label { margin-bottom: 0.6rem; }
-  .results-grid { grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
+  .results-grid { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
   .results-grid div { padding: 0.5rem 0.65rem; }
   .results-grid dd { font-size: 1.05rem; }
   .missed-list { margin-top: 0.7rem; }
@@ -713,4 +710,135 @@
 @keyframes discovery-in-side {
   from { opacity: 0; transform: translateY(12px) scale(0.98); }
   to { opacity: 1; transform: none; }
+}
+
+/* ───────── Mode chooser, rules, Pass & Play on phones ─────────
+   Same light card scale as the rest of the phone UI. */
+@media (max-width: 640px), (max-height: 500px) and (orientation: landscape) {
+  /* Corner readouts can sit over the bright Sun: a firmer shadow keeps them legible. */
+  .game-shell .space-corner { text-shadow: 0 0 4px rgba(0, 0, 0, 0.95), 0 1px 10px rgba(0, 0, 0, 0.9); }
+  .game-shell .pp-seat input { padding: 0.5rem 0.7rem; }
+  .game-shell .pp-swatch { width: 1.8rem; height: 1.8rem; }
+}
+
+@media (max-width: 640px) {
+  /* Tall cards (setup, lobby) leave some globe visible above and below. */
+  .game-shell .overlay-panel--card { max-height: min(86dvh, 700px); }
+  .game-shell .mode-options { margin: 0.7rem 0 0.2rem; gap: 0.5rem; }
+  .game-shell .mode-option { padding: 0.75rem 0.85rem; }
+  .game-shell .mode-option .option-chip__label { font-size: 0.98rem; }
+  .game-shell .mode-option .option-chip__blurb { font-size: 0.78rem; }
+  .game-shell .mode-rules { margin: 0.6rem 0 0.2rem; gap: 0.45rem; font-size: 0.88rem; }
+  .game-shell .pp-handoff__title { font-size: 1.35rem; letter-spacing: 0.12em; }
+  .game-shell .pp-handoff__to { font-size: 1rem; }
+  .game-shell .pp-handoff__note { font-size: 0.88rem; }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .game-shell .home-title { font-size: 2.2rem; }
+  .game-shell .overlay-panel__heading { font-size: 1.1rem; }
+  .game-shell .discovery-card__name { font-size: 1.15rem; }
+
+  .game-shell .mode-panel { padding-block: 0.8rem 0.9rem; }
+  .game-shell .mode-options { margin: 0.55rem 0 0; gap: 0.5rem; }
+  .game-shell .mode-option { padding: 0.6rem 0.85rem; }
+  .game-shell .mode-rules { margin: 0.45rem 0 0; gap: 0.3rem; font-size: 0.9rem; }
+  .game-shell .mode-panel .overlay-actions { margin-top: 0.65rem; }
+
+  /* Pass & Play setup: the game options span the full width (they were squeezed into
+     one column of the outer grid), and player names sit two per row. */
+  .game-shell .setup-options > .setup-options { grid-column: 1 / -1; }
+  .game-shell .pp-seats { grid-template-columns: 1fr 1fr; gap: 0.4rem 0.8rem; margin-top: 0.5rem; }
+
+  /* Hand-off: one-line title so everything fits a short screen. */
+  .game-shell .pp-handoff { padding: 0.75rem; }
+  .game-shell .pp-handoff__inner { gap: 0.3rem; }
+  .game-shell .pp-handoff__meta { margin-bottom: 0.2rem; }
+  .game-shell .pp-handoff__title { margin-bottom: 0.3rem; font-size: 1.35rem; letter-spacing: 0.12em; }
+  .game-shell .pp-handoff__to { font-size: 1rem; }
+  .game-shell .pp-handoff__note { font-size: 0.86rem; }
+  .game-shell .pp-handoff__ready { margin-top: 0.6rem; min-height: 40px; }
+  .game-shell .pp-handoff__quit { margin-top: 0.2rem; }
+}
+
+/* Pass & Play reveal on phones: the place name, region and the compact board — the
+   coordinates and the optional fact are dropped so the answer stays in view. */
+@media (max-width: 640px), (max-height: 500px) and (orientation: landscape) {
+  .game-shell .discovery-card:has(.pp-board) .discovery-card__fact,
+  .game-shell .discovery-card:has(.pp-board) .discovery-card__coords { display: none; }
+  .game-shell .discovery-card:has(.pp-board) .pp-board { margin-top: 0.55rem; gap: 0.35rem; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .game-shell .discovery-card:has(.pp-board) {
+    max-height: calc(100dvh - 2.85rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    padding-block: 0.75rem 0.8rem;
+  }
+  .game-shell .discovery-card:has(.pp-board) .discovery-card__footer { margin-top: 0.55rem; }
+  .game-shell .discovery-card:has(.pp-board) .discovery-card__footer .gh-btn { min-height: 38px; padding-block: 0.4rem; }
+}
+
+/* ───────── Review pass: lighter HUD, quieter corners, narrower cards ───────── */
+@media (max-width: 640px), (max-height: 500px) and (orientation: landscape) {
+  /* Scroll regions keep their soft fade but no visible scrollbar track. */
+  .game-shell .setup-panel > .setup-options,
+  .game-shell .lobby-panel > .lobby-panel__body,
+  .game-shell .discovery-card {
+    scrollbar-width: none;
+  }
+  .game-shell .setup-panel > .setup-options::-webkit-scrollbar,
+  .game-shell .lobby-panel > .lobby-panel__body::-webkit-scrollbar,
+  .game-shell .discovery-card::-webkit-scrollbar { display: none; }
+
+  /* Place card: one compact block. The "One guess only" reminder is in the rules. */
+  .game-shell .game-hud__prompt { display: none; }
+  .game-shell .game-hud__player { color: var(--player-color); font-weight: 600; }
+}
+
+@media (max-width: 640px) {
+  .game-shell .game-hud__challenge { padding: 0.32rem 0.95rem 0.38rem; min-width: 9rem; }
+  .game-shell .game-hud__target { font-size: 1.02rem; line-height: 1.2; }
+  .game-shell .game-hud__difficulty { margin-bottom: 0.04rem; }
+  /* Home telemetry: smaller values so the corner reads as a caption, not a headline. */
+  .game-shell .space-corner__value { font-size: 0.82rem; }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  /* HUD: stats bar and place card share one height and one baseline. */
+  .game-shell .game-hud { align-items: stretch; }
+  .game-shell .game-hud__top,
+  .game-shell .game-hud__challenge { align-self: stretch; height: 48px; box-sizing: border-box; }
+  .game-shell .hud-stat { display: flex; flex-direction: column; justify-content: center; }
+  .game-shell .game-hud__challenge {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0.2rem 0.95rem;
+  }
+  .game-shell .game-hud__difficulty { margin-bottom: 0; font-size: 0.56rem; }
+  .game-shell .game-hud__target { font-size: 0.98rem; line-height: 1.15; }
+
+  /* Corners: small captions; the orbital list and the date / sub-solar captions go. */
+  .game-shell .space-corner { font-size: 0.54rem; }
+  .game-shell .space-corner__value { font-size: 0.78rem; }
+  .game-shell .space-corner--tl .space-corner__meta,
+  .game-shell .space-corner--tr .space-corner__meta,
+  .game-shell .space-corner--bl,
+  .game-shell .space-corner--br .space-corner__label,
+  .game-shell .space-corner--br .space-corner__meta { display: none; }
+
+  /* Setup / lobby: a centred card with globe visible on both sides. */
+  .game-shell .setup-panel,
+  .game-shell .lobby-panel { width: min(600px, 76vw); }
+}
+/* Lobby settings row: summary on the left, a small Change button on the right. */
+.game-shell .lobby-settings__text { flex: 1; }
+.game-shell .lobby-panel .lobby-settings__toggle { flex: none; width: auto; min-height: 34px; padding: 0.3rem 0.9rem; font-size: 0.84rem; }
+.game-shell .pp-handoff__ready { width: auto; min-width: 11rem; max-width: 16rem; }
+@media (max-height: 500px) and (orientation: landscape) {
+  .game-shell .setup-panel,
+  .game-shell .lobby-panel { max-height: calc(100dvh - 2.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)); }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  /* Room on the right for the FPS / ping readout. */
+  .game-shell .game-hud__challenge { flex: 0 1 15rem; }
 }

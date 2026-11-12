@@ -1,0 +1,29 @@
+/* Mode chooser + rules */
+.mode-panel {
+  width: min(400px, calc(100% - 2rem));
+}
+.mode-options {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0.9rem 0 0.4rem;
+}
+.mode-option {
+  padding: 0.95rem 1rem;
+}
+.mode-option .option-chip__label {
+  font-size: 1.05rem;
+}
+.mode-option .option-chip__blurb {
+  font-size: 0.85rem;
+}
+.mode-rules {
+  margin: 0.8rem 0 0.4rem;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.55rem;
+  line-height: 1.45;
+}
+.mode-rules li::marker {
+  color: var(--gh-accent-2);
+  font-weight: 600;
+}

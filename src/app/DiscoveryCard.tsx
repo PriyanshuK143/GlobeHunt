@@ -20,13 +20,15 @@ interface DiscoveryCardProps {
   stats?: Array<{ label: string; value: string }>
   children?: ReactNode
   footer?: ReactNode
+  /** Overrides the default "Discovered" / "Time's up" banner. */
+  banner?: string
 }
 
 /** The "you found it" card: place, region, coordinates, one verified fact, stats. */
-export function DiscoveryCard({ info, found, stats, children, footer }: DiscoveryCardProps) {
+export function DiscoveryCard({ info, found, stats, children, footer, banner }: DiscoveryCardProps) {
   return (
     <section className={`discovery-card ${found ? 'is-found' : 'is-missed'}`} aria-live="polite">
-      <p className="discovery-card__banner">{found ? 'Discovered' : 'Time’s up — here it is'}</p>
+      <p className="discovery-card__banner">{banner ?? (found ? 'Discovered' : 'Time’s up — here it is')}</p>
       <h2 className="discovery-card__name">{info.name}</h2>
       <p className="discovery-card__subtitle">{info.subtitle}</p>
       <p className="discovery-card__coords">{formatLatLng(info.location)}</p>

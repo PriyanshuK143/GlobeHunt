@@ -17,10 +17,14 @@ interface GameSetupOptionsProps {
   onChange: (patch: Partial<GameConfig>) => void
   /** Non-host multiplayer players see the host's choices but can't edit them. */
   readOnly?: boolean
+  /** Practice has no fixed round count. */
+  hideRounds?: boolean
+  /** Practice always shows place names. */
+  hideLabels?: boolean
 }
 
 /** Shared game configuration controls (singleplayer setup + multiplayer lobby). */
-export function GameSetupOptions({ config, onChange, readOnly = false }: GameSetupOptionsProps) {
+export function GameSetupOptions({ config, onChange, readOnly = false, hideRounds = false, hideLabels = false }: GameSetupOptionsProps) {
   const isPreset = ROUND_OPTIONS.includes(config.rounds)
   const [customOpen, setCustomOpen] = useState(!isPreset)
   const [draft, setDraft] = useState(String(config.rounds))
@@ -60,6 +64,7 @@ export function GameSetupOptions({ config, onChange, readOnly = false }: GameSet
         </div>
       </fieldset>
 
+      {hideRounds ? null : (
       <fieldset className="option-group" disabled={readOnly}>
         <legend>Rounds</legend>
         <div className="option-row">
@@ -108,6 +113,7 @@ export function GameSetupOptions({ config, onChange, readOnly = false }: GameSet
           ) : null}
         </div>
       </fieldset>
+      )}
 
       <fieldset className="option-group" disabled={readOnly}>
         <legend>Round timer</legend>
@@ -159,6 +165,7 @@ export function GameSetupOptions({ config, onChange, readOnly = false }: GameSet
         </div>
       </fieldset>
 
+      {hideLabels ? null : (
       <fieldset className="option-group labels-toggle" disabled={readOnly}>
         <legend>Show place names on map</legend>
         <div className="labels-toggle__row">
@@ -176,13 +183,9 @@ export function GameSetupOptions({ config, onChange, readOnly = false }: GameSet
               </button>
             ))}
           </div>
-          <p className="labels-toggle__note">
-            {config.showLabels
-              ? 'Place names on the map help you find your way.'
-              : 'Search the globe without place names.'}
-          </p>
         </div>
       </fieldset>
+      )}
     </div>
   )
 }

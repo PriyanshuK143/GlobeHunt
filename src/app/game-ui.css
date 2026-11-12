@@ -373,7 +373,7 @@
 
 .results-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.75rem;
   margin: 0;
 }
@@ -1274,4 +1274,26 @@ input.field,
 @keyframes jet-cross-back {
   from { left: 108%; }
   to { left: -8%; }
+}
+
+/* Lobby: game settings collapse to a one-line summary ("Change" opens the options). */
+.lobby-settings {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.4rem;
+}
+.lobby-settings__text { min-width: 0; }
+.lobby-settings__text .setup-panel__mode { margin: 0 0 0.15rem; }
+.lobby-settings__summary {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--gh-text);
+}
+.lobby-settings__toggle {
+  flex: none;
+  min-height: 34px;
+  padding: 0.3rem 0.9rem;
+  font-size: 0.84rem;
 }

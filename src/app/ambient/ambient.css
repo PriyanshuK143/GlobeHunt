@@ -617,7 +617,6 @@
   letter-spacing: 0.14em;
 }
 .labels-toggle__row { display: flex; align-items: center; gap: 0.9rem; flex-wrap: wrap; }
-.labels-toggle__note { margin: 0; font-size: 0.85rem; color: var(--gh-muted); flex: 1; min-width: 12rem; }
 .segmented {
   display: inline-flex;
   padding: 3px;

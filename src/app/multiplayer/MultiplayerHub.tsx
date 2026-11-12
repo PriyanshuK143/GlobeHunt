@@ -8,10 +8,9 @@ interface MultiplayerHubProps {
 export function MultiplayerHub({ connected, onCreate, onJoin, onBack }: MultiplayerHubProps) {
   return (
     <div className="overlay-panel overlay-panel--card">
-      <h2 className="overlay-panel__heading">Multiplayer</h2>
-      <p className="overlay-panel__sub">
-        {connected ? 'Create or join a room — up to 8 players' : 'Connecting to server…'}
-      </p>
+      <p className="setup-panel__mode">Multiplayer</p>
+      <h2 className="overlay-panel__heading">Online</h2>
+      {connected ? null : <p className="overlay-panel__sub">Connecting to the server…</p>}
       <div className="overlay-actions overlay-actions--stack">
         <button
           type="button"

@@ -43,7 +43,7 @@ export function PauseMenu({ multiplayer, settings, onSettingsChange, onResume, o
       <div className={`pause-panel pause-panel--${view}`} key={view}>
         {view === 'menu' ? (
           <>
-            <p className="pause-panel__kicker">{multiplayer ? 'Match in progress' : 'Round paused'}</p>
+            {multiplayer ? <p className="pause-panel__kicker">Match in progress</p> : null}
             <h2 id="pause-title" className="pause-panel__title">
               {multiplayer ? 'Menu' : 'Paused'}
             </h2>

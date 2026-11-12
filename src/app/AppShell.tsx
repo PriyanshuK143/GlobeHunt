@@ -9,7 +9,7 @@ import {
   type GlobeNavigationApi,
   type LatLng,
 } from '../globe'
-import { useSingleplayerGame } from '../game'
+import { usePassAndPlay, useSingleplayerGame } from '../game'
 import { useMultiplayer } from '../multiplayer/useMultiplayer'
 import { HomeScreen } from './HomeScreen'
 import { MainMenu } from './MainMenu'
@@ -40,22 +40,34 @@ import { gameAudio } from '../settings/audio'
 import { useAudioSettings, useAudioUnlock } from '../audio'
 import { useGameAudio } from './useGameAudio'
 import { setTravelReducedMotion, travelTo } from '../game/navigation/travel'
-import { answerLocation, labelFilterFor, labelTargetFor, labelTargetForMultiplayer } from '../game'
+import { revealView } from '../game/navigation/revealView'
+import { answerLocation, labelFilterFor, labelTargetFor, labelTargetForMultiplayer, practiceTargetLabels } from '../game'
 import type { GlobeLabelsConfig } from '../globe'
 import { SpaceCorners } from './ambient/SpaceCorners'
 import { MarkerConfirm } from './MarkerConfirm'
 import { AmbientCommentary } from './ambient/AmbientCommentary'
 import { revealApp } from './launchVeil'
 import { takeInviteCode } from '../multiplayer/invite'
+import { PassPlaySetup } from './passplay/PassPlaySetup'
+import { PassPlayHandoff } from './passplay/PassPlayHandoff'
+import { PassPlayFinal, PassPlayReveal } from './passplay/PassPlayResults'
 import './game-ui.css'
 import './ambient/ambient.css'
 import './mobile.css'
+import './passplay/passplay.css'
+import './modes/modes.css'
+import { ModeChooser, ModeRules } from './modes/PlayModes'
+import type { PlayMode } from './modes/playModes'
 
 export type AppMode =
   | 'home'
   | 'menu'
   | 'singleplayer'
   | 'multiplayer'
+  | 'passplay'
+  | 'choose-single'
+  | 'choose-multi'
+  | 'rules'
   | 'settings'
   | 'credits'
   | 'howto'
@@ -87,6 +99,9 @@ export function AppShell() {
   const flashRef = useRef<HTMLDivElement>(null)
   const sp = useSingleplayerGame()
   const mp = useMultiplayer()
+  const pp = usePassAndPlay()
+  // Mode whose rules screen is showing (between the chooser and that mode's setup).
+  const [rulesFor, setRulesFor] = useState<PlayMode>('classic')
   // Draggable answer marker (separate from scoring; confirm hands lat/lng to onGlobePick).
   const marker = useMemo(() => createMarkerStore(), [])
   useAudioUnlock()
@@ -159,15 +174,22 @@ export function AppShell() {
 
   const pickingEnabled = useMemo(() => {
     if (mode === 'singleplayer') return sp.pickingEnabled
+    if (mode === 'passplay') return pp.pickingEnabled
     if (mode === 'multiplayer' && mp.screen === 'playing' && !mp.finished) {
       return Boolean(mp.roundStartedAt && now >= mp.roundStartedAt)
     }
     return false
-  }, [mode, sp.pickingEnabled, mp.screen, mp.finished, mp.roundStartedAt, now])
+  }, [mode, sp.pickingEnabled, pp.pickingEnabled, mp.screen, mp.finished, mp.roundStartedAt, now])
 
   const onGlobePick = (coords: LatLng) => {
     if (mode === 'singleplayer') {
       sp.handleGlobePick(coords)
+      return
+    }
+    if (mode === 'passplay') {
+      // One guess per player: lock it in with no right/wrong feedback until the reveal.
+      gameAudio.play('click', settings)
+      pp.submit(coords, globeRef.current)
       return
     }
     if (mode === 'multiplayer' && mp.screen === 'playing' && !mp.finished) {
@@ -195,7 +217,8 @@ export function AppShell() {
 
   const reducedMotion = settings.reducedMotion || prefersReducedMotion()
   useEffect(() => setTravelReducedMotion(reducedMotion), [reducedMotion])
-  const inMatch = inSpMatch || inMpMatch
+  const inPpMatch = mode === 'passplay' && pp.phase !== 'setup'
+  const inMatch = inSpMatch || inMpMatch || inPpMatch
 
   const ambient = useMemo<AmbientProfile>(
     () => ({
@@ -209,22 +232,37 @@ export function AppShell() {
 
   const activelySearching =
     (mode === 'singleplayer' && sp.phase === 'playing' && sp.pickingEnabled) ||
-    (mode === 'multiplayer' && mp.screen === 'playing' && !mp.finished)
+    (mode === 'multiplayer' && mp.screen === 'playing' && !mp.finished) ||
+    (mode === 'passplay' && pp.phase === 'turn' && pp.pickingEnabled)
   const commentaryRound =
-    mode === 'singleplayer' ? `sp-${sp.roundIndex}-${sp.currentChallenge?.id ?? ''}` : `mp-${mp.challenge?.roundKey ?? ''}`
+    mode === 'singleplayer'
+      ? `sp-${sp.roundIndex}-${sp.currentChallenge?.id ?? ''}`
+      : mode === 'passplay'
+        ? `pp-${pp.roundIndex}-${pp.turnIndex}`
+        : `mp-${mp.challenge?.roundKey ?? ''}`
 
-  // New challenge or leaving play → remove the previous target.
+  // New challenge, a new Pass & Play turn, or leaving play → remove the previous target.
   const challengeKey =
-    mode === 'singleplayer' ? sp.currentChallenge?.id ?? null : mode === 'multiplayer' ? mp.challenge?.roundKey ?? null : null
+    mode === 'singleplayer'
+      ? sp.currentChallenge?.id ?? null
+      : mode === 'multiplayer'
+        ? mp.challenge?.roundKey ?? null
+        : mode === 'passplay' && pp.phase !== 'setup'
+          ? `pp-${pp.roundIndex}-${pp.turnIndex}-${pp.phase === 'handoff' ? 'handoff' : 'play'}`
+          : null
   useEffect(() => {
     marker.clear()
   }, [marker, challengeKey, mode])
 
-  // Discovery / reveal: lock the reticle on the answer and glide the camera to it.
+  // Discovery / reveal: lock the reticle on the answer and glide the camera to it,
+  // keeping the answer clear of the result card when the card covers the centre.
   const revealCamera = (loc: LatLng) => {
     const view = globeRef.current?.getView()
     const altitude = Math.min(2.3, Math.max(1.6, (view?.altitude ?? 2) * 0.88))
-    void travelTo(globeRef.current, { lat: loc.lat, lng: loc.lng, altitude }, { minMs: 900, maxMs: 1700, sound: false })
+    const card = document.querySelector('.discovery-card')?.getBoundingClientRect()
+    const coversCentre = card && card.left < window.innerWidth / 2 && card.right > window.innerWidth / 2
+    const target = revealView(loc, altitude, coversCentre ? card.top : null)
+    void travelTo(globeRef.current, target, { minMs: 900, maxMs: 1700, sound: false })
   }
   useEffect(() => {
     if (mode !== 'singleplayer' || sp.phase !== 'round_result' || !sp.lastRoundResult) return
@@ -239,6 +277,13 @@ export function AppShell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, sp.phase, sp.lastRoundResult])
   useEffect(() => {
+    if (mode !== 'passplay' || pp.phase !== 'reveal' || !pp.challenge) return
+    const loc = answerLocation(pp.challenge)
+    marker.reveal(loc)
+    revealCamera(loc)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, pp.phase, pp.roundIndex])
+  useEffect(() => {
     if (mode !== 'multiplayer' || mp.screen !== 'round_result' || !mp.roundResult?.reveal) return
     const loc = mp.roundResult.reveal.location
     marker.reveal(loc)
@@ -248,21 +293,37 @@ export function AppShell() {
 
   // Atlas labels: only during a match, per the (host's) setup; answer labels hidden while searching.
   const showLabelsSetting =
-    mode === 'multiplayer' ? mp.room?.config.showLabels ?? true : sp.config.showLabels
-  const searchTargetId = mode === 'singleplayer' && (sp.phase === 'playing' || sp.phase === 'loading') ? sp.currentChallenge?.id ?? null : null
+    mode === 'multiplayer' ? mp.room?.config.showLabels ?? true : mode === 'passplay' ? pp.config.showLabels : sp.config.showLabels
+  const searchTargetId =
+    mode === 'singleplayer' && (sp.phase === 'playing' || sp.phase === 'loading')
+      ? sp.currentChallenge?.id ?? null
+      : mode === 'passplay'
+        ? pp.challenge?.id ?? null
+        : null
   // Same round index on every client → identical decoys in multiplayer.
-  const searchRound = mode === 'multiplayer' ? mp.room?.roundIndex ?? 0 : sp.roundIndex
-  const labelConfig = useMemo<GlobeLabelsConfig>(
-    () => ({
-      enabled: inMatch && showLabelsSetting,
-      filter: labelFilterFor(
+  const searchRound = mode === 'multiplayer' ? mp.room?.roundIndex ?? 0 : mode === 'passplay' ? pp.roundIndex : sp.roundIndex
+  // Pass & Play: no labels on the hand-off screen (they return with the next turn).
+  const ppLabelsOff = mode === 'passplay' && pp.phase !== 'turn' && pp.phase !== 'reveal'
+  // Practice is for learning the map: every name is shown, including the place being searched.
+  const practiceLabels = mode === 'singleplayer' && sp.practice
+  const labelConfig = useMemo<GlobeLabelsConfig>(() => {
+    const practicePin = practiceLabels ? practiceTargetLabels(sp.currentChallenge) : null
+    return {
+      enabled: inMatch && (practiceLabels || showLabelsSetting) && !ppLabelsOff,
+      extra: practicePin?.extra,
+      filter: practiceLabels
+        ? practicePin?.filter
+        : labelFilterFor(
         mode === 'singleplayer'
           ? labelTargetFor(sp.currentChallenge, searchRound)
-          : labelTargetForMultiplayer(mp.challenge?.name, mp.challenge?.kind, mp.challenge?.featureKind, mp.challenge?.roundKey),
+          : mode === 'passplay'
+            ? labelTargetFor(pp.challenge, searchRound)
+            : labelTargetForMultiplayer(mp.challenge?.name, mp.challenge?.kind, mp.challenge?.featureKind, mp.challenge?.roundKey),
       ),
-    }),
+    }
+  },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [inMatch, showLabelsSetting, searchTargetId, searchRound, mp.challenge?.roundKey],
+    [inMatch, practiceLabels, showLabelsSetting, ppLabelsOff, searchTargetId, searchRound, mp.challenge?.roundKey],
   )
 
   useGameAudio({
@@ -272,7 +333,7 @@ export function AppShell() {
     marker,
     searching: activelySearching,
     challengeKey,
-    remainingMs: mode === 'multiplayer' ? mpRemaining : sp.remainingMs,
+    remainingMs: mode === 'multiplayer' ? mpRemaining : mode === 'passplay' ? pp.remainingMs : sp.remainingMs,
     spSuccess: sp.successFlash,
     spMiss: sp.missFlash,
     spTimeoutKey:
@@ -298,6 +359,7 @@ export function AppShell() {
   }
   const spLive = mode === 'singleplayer' && sp.phase === 'playing' && sp.pickingEnabled
   const mpLive = mode === 'multiplayer' && (mp.screen === 'playing' || mp.screen === 'round_result')
+  const ppLive = mode === 'passplay' && pp.phase === 'turn' && pp.pickingEnabled
   /** Shared by ESC and the touch menu button. Returns true when the menu opened. */
   const openPause = useCallback((): boolean => {
     if (pauseOpen) return false
@@ -308,13 +370,18 @@ export function AppShell() {
       setPauseOpen(true)
       return true
     }
+    if (ppLive) {
+      if (!pp.pause()) return false
+      setPauseOpen(true)
+      return true
+    }
     if (mpLive) {
       // Multiplayer: local-only menu; the server match keeps running.
       setPauseOpen(true)
       return true
     }
     return false
-  }, [pauseOpen, spLive, mpLive, marker, sp])
+  }, [pauseOpen, spLive, ppLive, mpLive, marker, sp, pp])
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.repeat) return
@@ -333,6 +400,7 @@ export function AppShell() {
   const resumeFromPause = () => {
     setPauseOpen(false)
     if (mode === 'singleplayer') sp.resume()
+    if (mode === 'passplay') pp.resume()
   }
   const updateSettings = (patch: Partial<AppSettings>) => {
     setSettings((prev) => {
@@ -381,6 +449,7 @@ export function AppShell() {
 
   const goMenu = () => {
     if (mode === 'singleplayer') sp.backToMenu()
+    if (mode === 'passplay') pp.reset()
     if (mode === 'multiplayer' && mp.room) mp.leaveRoom()
     const fromMatch = inMatch
     go('menu', () => {
@@ -388,6 +457,22 @@ export function AppShell() {
       if (fromMatch) void globeRef.current?.flyTo(MENU_VIEW, settings.reducedMotion ? 300 : 1400)
       else globeRef.current?.setView(MENU_VIEW)
     })
+  }
+
+  /** Leave a mode's setup (or online hub) for its Singleplayer / Multiplayer chooser. */
+  const goChooser = (kind: 'single' | 'multi') => {
+    if (mode === 'singleplayer') sp.backToMenu()
+    if (mode === 'passplay') pp.reset()
+    if (mode === 'multiplayer' && mp.room) mp.leaveRoom()
+    go(kind === 'single' ? 'choose-single' : 'choose-multi')
+  }
+
+  /** Rules → that mode's setup screen. */
+  const startMode = (m: PlayMode) => {
+    gameAudio.play('click', settings)
+    if (m === 'classic' || m === 'practice') go('singleplayer', () => sp.setPractice(m === 'practice'))
+    else if (m === 'online') go('multiplayer', () => mp.backToHub())
+    else go('passplay', () => pp.reset())
   }
 
   /** Menu → back out to the Fly screen with a gentle camera pull-back. */
@@ -462,18 +547,20 @@ export function AppShell() {
           <MainMenu
           onSingleplayer={() => {
             gameAudio.play('click', settings)
-            go('singleplayer')
+            go('choose-single')
           }}
           onMultiplayer={() => {
             gameAudio.play('click', settings)
             const code = inviteCode
+            if (!code) {
+              go('choose-multi')
+              return
+            }
+            // Invite link: straight to Join with the room code filled in.
             go('multiplayer', () => {
-              if (code) {
-                // Invite link: straight to Join with the room code filled in.
-                mp.setJoinCode(code)
-                mp.openJoin()
-                setInviteCode(null)
-              } else mp.backToHub()
+              mp.setJoinCode(code)
+              mp.openJoin()
+              setInviteCode(null)
             })
           }}
           onSettings={() => {
@@ -494,16 +581,37 @@ export function AppShell() {
         </div>
       ) : null}
 
+      {mode === 'choose-single' || mode === 'choose-multi' ? (
+        <ModeChooser
+          title={mode === 'choose-single' ? 'Singleplayer' : 'Multiplayer'}
+          options={mode === 'choose-single' ? ['classic', 'practice'] : ['online', 'passplay']}
+          onPick={(m) => {
+            gameAudio.play('click', settings)
+            go('rules', () => setRulesFor(m))
+          }}
+          onBack={() => go('menu')}
+        />
+      ) : null}
+
+      {mode === 'rules' ? (
+        <ModeRules
+          mode={rulesFor}
+          onContinue={() => startMode(rulesFor)}
+          onBack={() => go(rulesFor === 'classic' || rulesFor === 'practice' ? 'choose-single' : 'choose-multi')}
+        />
+      ) : null}
+
       {mode === 'singleplayer' && sp.phase === 'config' ? (
         <>
           <header className="brand-float">
             <h1 className="brand-float__title">GLOBEHUNT</h1>
           </header>
           <GameConfigPanel
+            practice={sp.practice}
             config={sp.config}
             error={sp.error}
             onChange={sp.setConfig}
-            onBack={goMenu}
+            onBack={() => goChooser('single')}
             onStart={() => {
               void sp.startGame(globeRef.current)
             }}
@@ -521,21 +629,24 @@ export function AppShell() {
           remainingMs={sp.remainingMs}
           totalScore={sp.totalScore}
           loading={sp.phase === 'loading' || (!sp.pickingEnabled && !sp.paused)}
+          practice={sp.practice}
         />
       ) : null}
 
       {mode === 'singleplayer' && sp.phase === 'round_result' && sp.lastRoundResult ? (
         <RoundResultOverlay
           result={sp.lastRoundResult}
-          isLast={sp.roundIndex + 1 >= sp.totalRounds}
+          isLast={!sp.practice && sp.roundIndex + 1 >= sp.totalRounds}
           onContinue={() => {
             void sp.continueAfterRound(globeRef.current)
           }}
+          onEndPractice={sp.practice ? sp.endPractice : undefined}
         />
       ) : null}
 
       {mode === 'singleplayer' && sp.phase === 'results' && sp.summary ? (
         <ResultsScreen
+          practice={sp.practice}
           summary={sp.summary}
           onMenu={goMenu}
           onPlayAgain={() => {
@@ -544,12 +655,83 @@ export function AppShell() {
         />
       ) : null}
 
+      {mode === 'passplay' && pp.phase === 'setup' ? (
+        <>
+          <header className="brand-float">
+            <h1 className="brand-float__title">GLOBEHUNT</h1>
+          </header>
+          <PassPlaySetup
+            config={pp.config}
+            error={pp.error}
+            initialPlayers={pp.players}
+            onConfig={pp.setConfig}
+            onBack={() => goChooser('multi')}
+            onStart={(players) => {
+              gameAudio.play('click', settings)
+              void pp.start(players, globeRef.current)
+            }}
+          />
+        </>
+      ) : null}
+
+      {mode === 'passplay' && (pp.phase === 'turn' || pp.phase === 'loading') ? (
+        <GameHUD
+          challenge={pp.challenge}
+          difficulty={pp.config.difficulty}
+          roundIndex={pp.roundIndex}
+          totalRounds={pp.totalRounds}
+          remainingMs={pp.remainingMs}
+          totalScore={pp.scores[pp.turnIndex] ?? 0}
+          loading={pp.phase === 'loading' || (!pp.pickingEnabled && !pp.paused)}
+          player={
+            pp.players[pp.turnIndex]
+              ? { ...pp.players[pp.turnIndex], turn: pp.turnIndex + 1, turns: pp.players.length }
+              : undefined
+          }
+        />
+      ) : null}
+
+      {mode === 'passplay' && pp.phase === 'handoff' && pp.players[pp.turnIndex] ? (
+        <PassPlayHandoff
+          player={pp.players[pp.turnIndex]}
+          roundIndex={pp.roundIndex}
+          totalRounds={pp.totalRounds}
+          turnIndex={pp.turnIndex}
+          totalTurns={pp.players.length}
+          onReady={() => pp.ready(globeRef.current)}
+          onQuit={goMenu}
+        />
+      ) : null}
+
+      {mode === 'passplay' && pp.phase === 'reveal' && pp.challenge && pp.roundResults ? (
+        <PassPlayReveal
+          challenge={pp.challenge}
+          players={pp.players}
+          results={pp.roundResults}
+          scores={pp.scores}
+          isLast={pp.roundIndex + 1 >= pp.totalRounds}
+          onNext={() => pp.nextRound(globeRef.current)}
+        />
+      ) : null}
+
+      {mode === 'passplay' && pp.phase === 'final' && pp.rankings ? (
+        <PassPlayFinal
+          rankings={pp.rankings}
+          totalRounds={pp.totalRounds}
+          onRematch={() => {
+            void pp.rematch(globeRef.current)
+          }}
+          onChangePlayers={pp.reset}
+          onMenu={goMenu}
+        />
+      ) : null}
+
       {mode === 'multiplayer' && mp.screen === 'hub' ? (
         <MultiplayerHub
           connected={mp.connected}
           onCreate={mp.openCreate}
           onJoin={mp.openJoin}
-          onBack={goMenu}
+          onBack={() => goChooser('multi')}
         />
       ) : null}
 
@@ -593,7 +775,11 @@ export function AppShell() {
       ) : null}
 
       {mode === 'multiplayer' && mp.screen === 'round_result' && mp.roundResult ? (
-        <MpRoundResultPanel view={mp.roundResult} selfId={mp.self?.id ?? null} />
+        <MpRoundResultPanel
+          view={mp.roundResult}
+          selfId={mp.self?.id ?? null}
+          isLast={(mp.room?.roundIndex ?? 0) + 1 >= (mp.room?.totalRounds ?? mp.room?.config.rounds ?? 1)}
+        />
       ) : null}
 
       {mode === 'multiplayer' && mp.screen === 'match_results' && mp.rankings ? (
@@ -624,7 +810,7 @@ export function AppShell() {
 
       {/* Touch screens have no Esc key: this opens the same pause menu (shown only on
           touch / no-hover devices via CSS, so desktop is unchanged). */}
-      {(spLive || mpLive) && !pauseOpen ? (
+      {(spLive || ppLive || mpLive) && !pauseOpen ? (
         <button
           type="button"
           className="hud-menu-btn"
@@ -655,7 +841,7 @@ export function AppShell() {
         <HowToPlay
           reducedMotion={settings.reducedMotion}
           onMenu={() => go('menu')}
-          onPlay={() => go('singleplayer')}
+          onPlay={() => go('singleplayer', () => sp.setPractice(false))}
         />
       ) : null}
 

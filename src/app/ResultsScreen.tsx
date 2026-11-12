@@ -4,6 +4,7 @@ interface ResultsScreenProps {
   summary: MatchSummary
   onPlayAgain: () => void
   onMenu: () => void
+  practice?: boolean
 }
 
 const DIFFICULTY_LABEL = {
@@ -18,12 +19,14 @@ function formatAvg(ms: number | null): string {
   return `${(ms / 1000).toFixed(1)}s`
 }
 
-export function ResultsScreen({ summary, onPlayAgain, onMenu }: ResultsScreenProps) {
+export function ResultsScreen({ summary, onPlayAgain, onMenu, practice = false }: ResultsScreenProps) {
   return (
     <div className="overlay-panel overlay-panel--card">
-      <h2 className="overlay-panel__heading">Results</h2>
+      <h2 className="overlay-panel__heading">{practice ? 'Practice Summary' : 'Results'}</h2>
       <p className="overlay-panel__sub">
-        {DIFFICULTY_LABEL[summary.config.difficulty]} · {summary.results.length} {summary.results.length === 1 ? 'round' : 'rounds'}
+        {practice ? 'Practice · ' : ''}
+        {DIFFICULTY_LABEL[summary.config.difficulty]} · {summary.results.length}{' '}
+        {practice ? (summary.results.length === 1 ? 'location' : 'locations') : summary.results.length === 1 ? 'round' : 'rounds'}
       </p>
 
       <p className="results-score">{summary.totalScore}</p>
@@ -35,10 +38,6 @@ export function ResultsScreen({ summary, onPlayAgain, onMenu }: ResultsScreenPro
           <dd>
             {summary.correctCount}/{summary.results.length}
           </dd>
-        </div>
-        <div>
-          <dt>Missed</dt>
-          <dd>{summary.missedCount}</dd>
         </div>
         <div>
           <dt>Accuracy</dt>
@@ -68,7 +67,7 @@ export function ResultsScreen({ summary, onPlayAgain, onMenu }: ResultsScreenPro
           Main Menu
         </button>
         <button type="button" className="gh-btn gh-btn--primary" onClick={onPlayAgain}>
-          Play Again
+          {practice ? 'New Session' : 'Play Again'}
         </button>
       </div>
     </div>

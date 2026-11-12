@@ -7,17 +7,18 @@ interface GameConfigPanelProps {
   onChange: (patch: Partial<GameConfig>) => void
   onStart: () => void
   onBack: () => void
+  /** Practice: unlimited locations, no round count. */
+  practice?: boolean
 }
 
 /** Game Setup screen shown after choosing Singleplayer. */
-export function GameConfigPanel({ config, error, onChange, onStart, onBack }: GameConfigPanelProps) {
+export function GameConfigPanel({ config, error, onChange, onStart, onBack, practice = false }: GameConfigPanelProps) {
   return (
     <div className="overlay-panel overlay-panel--card setup-panel">
-      <p className="setup-panel__mode">Singleplayer</p>
+      <p className="setup-panel__mode">Singleplayer · {practice ? 'Practice' : 'Classic'}</p>
       <h2 className="overlay-panel__heading">Game Setup</h2>
-      <p className="overlay-panel__sub">Choose what to find and how to explore.</p>
 
-      <GameSetupOptions config={config} onChange={onChange} />
+      <GameSetupOptions config={config} onChange={onChange} hideRounds={practice} hideLabels={practice} />
 
       {error ? (
         <p className="form-error" role="alert">
@@ -30,7 +31,7 @@ export function GameConfigPanel({ config, error, onChange, onStart, onBack }: Ga
           Back
         </button>
         <button type="button" className="gh-btn gh-btn--primary" onClick={onStart}>
-          Start Game
+          {practice ? 'Start Practice' : 'Start Game'}
         </button>
       </div>
     </div>

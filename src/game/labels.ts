@@ -141,3 +141,31 @@ export function labelTargetForMultiplayer(
   if (!name || !kind || !roundKey) return null
   return { kind, name: kind === 'city' ? name.split(',')[0] : name, featureKind, seed: roundKey }
 }
+
+const PRACTICE_KIND: Record<string, LabelKind> = {
+  river: 'river',
+  lake: 'lake',
+  mountain: 'mountain',
+  range: 'range',
+  island: 'island',
+  desert: 'desert',
+  sea: 'sea',
+  strait: 'sea',
+}
+
+/**
+ * Practice: the searched place's name, pinned on the map at every zoom so the player
+ * can read it and mark it. Returns the pinned label and a filter that hides other
+ * labels with the same name (so it never appears twice).
+ */
+export function practiceTargetLabels(c: Challenge | null): { extra: AtlasLabel[]; filter: LabelFilterFactory } | null {
+  if (!c) return null
+  const name = c.kind === 'city' ? c.name.split(',')[0] : c.name
+  const at = answerLocation(c)
+  const kind: LabelKind = c.kind === 'country' ? 'country' : c.kind === 'city' ? 'city' : PRACTICE_KIND[c.featureKind ?? ''] ?? 'region'
+  const id = `pin:practice:${c.id}`
+  const key = norm(name)
+  const pinned: AtlasLabel = { id, name, kind, lat: at.lat, lng: at.lng, maxDistance: 99, priority: 1000 }
+  const filter: LabelFilterFactory = () => (l) => l.id === id || norm(l.name) !== key
+  return { extra: [pinned], filter }
+}

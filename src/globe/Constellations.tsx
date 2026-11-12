@@ -63,6 +63,9 @@ function labelTexture(text: string): { texture: THREE.CanvasTexture; aspect: num
  */
 export function Constellations({ visible }: { visible: boolean }) {
   const gl = useThree((s) => s.gl)
+  // Phone-sized screens: names get clipped at the edges and crowd the UI; keep the
+  // star figures, drop the text.
+  const showNames = useThree((s) => Math.min(s.size.width, s.size.height) >= 500)
   const group = useRef<THREE.Group>(null)
   const fade = useRef(visible ? 1 : 0)
   const lastSky = useRef(-Infinity)
@@ -163,7 +166,10 @@ export function Constellations({ visible }: { visible: boolean }) {
     built.starMat.uniforms.uOpacity.value = 0.95 * f
     built.starMat.uniforms.uPixelRatio.value = gl.getPixelRatio()
     built.lineMat.opacity = 0.22 * f
-    for (const s of built.sprites) s.material.opacity = 0.42 * f
+    for (const s of built.sprites) {
+      s.sprite.visible = showNames
+      s.material.opacity = 0.42 * f
+    }
   })
 
   return (
